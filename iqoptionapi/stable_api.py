@@ -1058,20 +1058,50 @@ class IQ_Option:
             else:
                 return self.api.game_betinfo.isSuccessful, None
 
-    def get_optioninfo(self, limit):
+    def get_optioninfo(self, limit, timeout=10):
         self.api.api_game_getoptions_result = None
         self.api.get_options(limit)
+        start = time.time()
         while self.api.api_game_getoptions_result == None:
-            pass
+            if timeout is not None and time.time() - start > float(timeout):
+                self._set_last_operation(
+                    "get_optioninfo",
+                    "timeout",
+                    "timeout",
+                    {"limit": limit, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
 
+        self._set_last_operation(
+            "get_optioninfo",
+            "ok",
+            None,
+            {"limit": limit},
+        )
         return self.api.api_game_getoptions_result
 
-    def get_optioninfo_v2(self, limit):
+    def get_optioninfo_v2(self, limit, timeout=10):
         self.api.get_options_v2_data = None
         self.api.get_options_v2(limit, "binary,turbo")
+        start = time.time()
         while self.api.get_options_v2_data == None:
-            pass
+            if timeout is not None and time.time() - start > float(timeout):
+                self._set_last_operation(
+                    "get_optioninfo_v2",
+                    "timeout",
+                    "timeout",
+                    {"limit": limit, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
 
+        self._set_last_operation(
+            "get_optioninfo_v2",
+            "ok",
+            None,
+            {"limit": limit},
+        )
         return self.api.get_options_v2_data
 
     # __________________________BUY__________________________
@@ -1199,11 +1229,26 @@ class IQ_Option:
         )
         return self.api.result, self.api.buy_multi_option[req_id]["id"]
 
-    def sell_option(self, options_ids):
-        self.api.sell_option(options_ids)
+    def sell_option(self, options_ids, timeout=10):
         self.api.sold_options_respond = None
+        self.api.sell_option(options_ids)
+        start = time.time()
         while self.api.sold_options_respond == None:
-            pass
+            if timeout is not None and time.time() - start > float(timeout):
+                self._set_last_operation(
+                    "sell_option",
+                    "timeout",
+                    "timeout",
+                    {"options_ids": options_ids, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
+        self._set_last_operation(
+            "sell_option",
+            "ok",
+            None,
+            {"options_ids": options_ids},
+        )
         return self.api.sold_options_respond
 
     # __________________for Digital___________________
@@ -1220,12 +1265,21 @@ class IQ_Option:
 
         return self.api.underlying_list_data
 
-    def get_strike_list(self, ACTIVES, duration):
+    def get_strike_list(self, ACTIVES, duration, timeout=10):
         self.api.strike_list = None
         self.api.get_strike_list(ACTIVES, duration)
         ans = {}
+        start = time.time()
         while self.api.strike_list == None:
-            pass
+            if timeout is not None and time.time() - start > float(timeout):
+                self._set_last_operation(
+                    "get_strike_list",
+                    "timeout",
+                    "timeout",
+                    {"active": ACTIVES, "duration": duration, "timeout": timeout},
+                )
+                return None, None
+            time.sleep(min(self.suspend, 0.05))
         try:
             for data in self.api.strike_list["msg"]["strike"]:
                 temp = {}
@@ -1234,7 +1288,19 @@ class IQ_Option:
                 ans[("%.6f" % (float(data["value"]) * 10e-7))] = temp
         except:
             logging.error('**error** get_strike_list read problem...')
+            self._set_last_operation(
+                "get_strike_list",
+                "rejected",
+                "invalid_response",
+                {"active": ACTIVES, "duration": duration},
+            )
             return self.api.strike_list, None
+        self._set_last_operation(
+            "get_strike_list",
+            "ok",
+            None,
+            {"active": ACTIVES, "duration": duration, "count": len(ans)},
+        )
         return self.api.strike_list, ans
 
     def subscribe_strike_list(self, ACTIVE, expiration_period):

@@ -54,6 +54,8 @@ Status: implementado parcialmente nesta branch.
 - Tornar `buy_digital`, `buy_digital_spot` e `close_digital_option`
   diagnosticaveis via `last_operation`, com timeout parametrizavel e sem
   busy-wait puro.
+- Tornar `get_optioninfo`, `get_optioninfo_v2`, `sell_option` e
+  `get_strike_list` limitados por timeout, com `sleep` curto e diagnostico.
 
 ## Fase 3 - Estado por instancia
 
