@@ -59,6 +59,8 @@ Status: iniciado nesta branch.
   websocket por instancia de `IQOptionAPI`.
 - Tornar `close()` e `websocket_alive()` seguros antes ou apos falha parcial de
   conexao.
+- Serializar envios websocket por instancia com lock local, mantendo flags
+  globais apenas como compatibilidade legada.
 
 ## Fase 4 - Compra e candles
 

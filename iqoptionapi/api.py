@@ -156,6 +156,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.https_url = "https://{host}/api".format(host=host)
         self.wss_url = "wss://{host}/echo/websocket".format(host=host)
         self.websocket_client = None
+        self._send_lock = threading.Lock()
         self.socket_option_opened = {}
         self.socket_option_closed = {}
         self.timesync = TimeSync()
@@ -308,14 +309,19 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                msg=msg, request_id=request_id))
          
          
-        while (global_value.ssl_Mutual_exclusion or global_value.ssl_Mutual_exclusion_write) and no_force_send:
-            time.sleep(0.001)
-        global_value.ssl_Mutual_exclusion_write=True
-        try:
-            self.websocket.send(data)
-            logger.debug(data)
-        finally:
-            global_value.ssl_Mutual_exclusion_write=False
+        send_lock = getattr(self, "_send_lock", None)
+        if send_lock is None:
+            self._send_lock = threading.Lock()
+            send_lock = self._send_lock
+        with send_lock:
+            while (global_value.ssl_Mutual_exclusion or global_value.ssl_Mutual_exclusion_write) and no_force_send:
+                time.sleep(0.001)
+            global_value.ssl_Mutual_exclusion_write=True
+            try:
+                self.websocket.send(data)
+                logger.debug(data)
+            finally:
+                global_value.ssl_Mutual_exclusion_write=False
         
     @property
     def logout(self):
