@@ -647,12 +647,19 @@ class IQ_Option:
 
     def stop_candles_stream(self, ACTIVE, size):
         if size == "all":
-            self.stop_candles_all_size_stream(ACTIVE)
+            return self.stop_candles_all_size_stream(ACTIVE)
         elif size in self.size:
-            self.stop_candles_one_stream(ACTIVE, size)
+            return self.stop_candles_one_stream(ACTIVE, size)
         else:
             logging.error(
                 '**error** start_candles_stream please input right size')
+            self._set_last_operation(
+                "stop_candles_stream",
+                "rejected",
+                "invalid_size",
+                {"active": ACTIVE, "size": size},
+            )
+            return False
 
     def get_realtime_candles(self, ACTIVE, size):
         if size == "all":
@@ -712,18 +719,50 @@ class IQ_Option:
                 self.connect()
             time.sleep(1)
 
-    def stop_candles_one_stream(self, ACTIVE, size):
+    def stop_candles_one_stream(self, ACTIVE, size, timeout=10):
+        active_id = OP_code.ACTIVES.get(ACTIVE)
+        if active_id is None:
+            self._set_last_operation(
+                "stop_candles_one_stream",
+                "rejected",
+                "invalid_active",
+                {"active": ACTIVE, "size": size},
+            )
+            return False
+        if size not in self.size:
+            self._set_last_operation(
+                "stop_candles_one_stream",
+                "rejected",
+                "invalid_size",
+                {"active": ACTIVE, "size": size},
+            )
+            return False
         if ((ACTIVE + "," + str(size)) in self.subscribe_candle) == True:
             self.subscribe_candle.remove(ACTIVE + "," + str(size))
+        start = time.time()
         while True:
+            if timeout is not None and time.time() - start > timeout:
+                self._set_last_operation(
+                    "stop_candles_one_stream",
+                    "timeout",
+                    "timeout",
+                    {"active": ACTIVE, "size": size, "timeout": timeout},
+                )
+                return False
             try:
                 if self.api.candle_generated_check[str(ACTIVE)][int(size)] == {}:
+                    self._set_last_operation(
+                        "stop_candles_one_stream",
+                        "ok",
+                        None,
+                        {"active": ACTIVE, "size": size},
+                    )
                     return True
             except:
                 pass
             self.api.candle_generated_check[str(ACTIVE)][int(size)] = {}
-            self.api.unsubscribe(OP_code.ACTIVES[ACTIVE], size)
-            time.sleep(self.suspend * 10)
+            self.api.unsubscribe(active_id, size)
+            time.sleep(self.suspend)
 
     # ------------------------Subscribe ALL SIZE-----------------------
 
@@ -750,18 +789,42 @@ class IQ_Option:
                 self.connect()
             time.sleep(1)
 
-    def stop_candles_all_size_stream(self, ACTIVE):
+    def stop_candles_all_size_stream(self, ACTIVE, timeout=10):
+        active_id = OP_code.ACTIVES.get(ACTIVE)
+        if active_id is None:
+            self._set_last_operation(
+                "stop_candles_all_size_stream",
+                "rejected",
+                "invalid_active",
+                {"active": ACTIVE},
+            )
+            return False
         if (str(ACTIVE) in self.subscribe_candle_all_size) == True:
             self.subscribe_candle_all_size.remove(str(ACTIVE))
+        start = time.time()
         while True:
+            if timeout is not None and time.time() - start > timeout:
+                self._set_last_operation(
+                    "stop_candles_all_size_stream",
+                    "timeout",
+                    "timeout",
+                    {"active": ACTIVE, "timeout": timeout},
+                )
+                return False
             try:
                 if self.api.candle_generated_all_size_check[str(ACTIVE)] == {}:
-                    break
+                    self._set_last_operation(
+                        "stop_candles_all_size_stream",
+                        "ok",
+                        None,
+                        {"active": ACTIVE},
+                    )
+                    return True
             except:
                 pass
             self.api.candle_generated_all_size_check[str(ACTIVE)] = {}
-            self.api.unsubscribe_all_size(OP_code.ACTIVES[ACTIVE])
-            time.sleep(self.suspend * 10)
+            self.api.unsubscribe_all_size(active_id)
+            time.sleep(self.suspend)
 
     # ------------------------top_assets_updated---------------------------------------------
 

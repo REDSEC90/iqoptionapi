@@ -48,6 +48,9 @@ Status: implementado parcialmente nesta branch.
   `close_digital_option`.
 - Corrigir `start_mood_stream`/`stop_mood_stream` para nao usar comparacao
   encadeada incorreta, nao indexar lista com string e respeitar timeout.
+- Tornar `stop_candles_stream`, `stop_candles_one_stream` e
+  `stop_candles_all_size_stream` limitados por timeout e com retorno
+  booleano consistente.
 
 ## Fase 3 - Estado por instancia
 
