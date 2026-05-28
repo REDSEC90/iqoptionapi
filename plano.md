@@ -46,6 +46,8 @@ Status: implementado parcialmente nesta branch.
 - Adicionar timeout em `get_betinfo`, `get_order`, `get_pending`,
   `get_positions`, `get_position`, `buy_multi`, `buy_digital_spot` e
   `close_digital_option`.
+- Corrigir `start_mood_stream`/`stop_mood_stream` para nao usar comparacao
+  encadeada incorreta, nao indexar lista com string e respeitar timeout.
 
 ## Fase 3 - Estado por instancia
 

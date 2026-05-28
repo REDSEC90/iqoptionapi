@@ -793,22 +793,62 @@ class IQ_Option:
 
     # -----------------traders_mood----------------------
 
-    def start_mood_stream(self, ACTIVES):
-        if ACTIVES in self.subscribe_mood == False:
+    def start_mood_stream(self, ACTIVES, timeout=20):
+        active_id = OP_code.ACTIVES.get(ACTIVES)
+        if active_id is None:
+            self._set_last_operation(
+                "start_mood_stream",
+                "rejected",
+                "invalid_active",
+                {"active": ACTIVES},
+            )
+            return False
+        if ACTIVES not in self.subscribe_mood:
             self.subscribe_mood.append(ACTIVES)
 
+        start = time.time()
         while True:
-            self.api.subscribe_Traders_mood(OP_code.ACTIVES[ACTIVES])
+            if timeout is not None and time.time() - start > timeout:
+                self._set_last_operation(
+                    "start_mood_stream",
+                    "timeout",
+                    "timeout",
+                    {"active": ACTIVES, "timeout": timeout},
+                )
+                return False
+            self.api.subscribe_Traders_mood(active_id)
             try:
-                self.api.traders_mood[OP_code.ACTIVES[ACTIVES]]
-                break
+                self.api.traders_mood[active_id]
+                self._set_last_operation(
+                    "start_mood_stream",
+                    "ok",
+                    None,
+                    {"active": ACTIVES},
+                )
+                return True
             except:
-                time.sleep(5)
+                time.sleep(self.suspend)
 
     def stop_mood_stream(self, ACTIVES):
-        if ACTIVES in self.subscribe_mood == True:
-            del self.subscribe_mood[ACTIVES]
-        self.api.unsubscribe_Traders_mood(OP_code.ACTIVES[ACTIVES])
+        active_id = OP_code.ACTIVES.get(ACTIVES)
+        if active_id is None:
+            self._set_last_operation(
+                "stop_mood_stream",
+                "rejected",
+                "invalid_active",
+                {"active": ACTIVES},
+            )
+            return False
+        if ACTIVES in self.subscribe_mood:
+            self.subscribe_mood.remove(ACTIVES)
+        self.api.unsubscribe_Traders_mood(active_id)
+        self._set_last_operation(
+            "stop_mood_stream",
+            "ok",
+            None,
+            {"active": ACTIVES},
+        )
+        return True
 
     def get_traders_mood(self, ACTIVES):
         # return highter %
