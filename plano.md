@@ -60,6 +60,8 @@ Status: implementado parcialmente nesta branch.
   `get_position_history`, `get_available_leverages`, `cancel_order`,
   `close_position`, `get_overnight_fee`) limitadas por timeout e observaveis
   via `last_operation`.
+- Tornar `buy_order`, `change_auto_margin_call` e `change_order` limitados por
+  timeout, com diagnostico de aceite, rejeicao e pendencia.
 
 ## Fase 3 - Estado por instancia
 

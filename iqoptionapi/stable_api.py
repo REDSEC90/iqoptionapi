@@ -1653,7 +1653,7 @@ class IQ_Option:
                   take_profit_kind=None, take_profit_value=None,
 
                   use_trail_stop=False, auto_margin_call=False,
-                  use_token_for_commission=False):
+                  use_token_for_commission=False, timeout=30):
         self.api.buy_order_id = None
         self.api.buy_order(
             instrument_type=instrument_type, instrument_id=instrument_id,
@@ -1665,45 +1665,129 @@ class IQ_Option:
             use_token_for_commission=use_token_for_commission
         )
 
+        start_t = time.time()
         while self.api.buy_order_id == None:
-            pass
-        check, data = self.get_order(self.api.buy_order_id)
+            if timeout is not None and time.time() - start_t >= float(timeout):
+                self._set_last_operation(
+                    "buy_order",
+                    "timeout",
+                    "buy_order_id_timeout",
+                    {"instrument_type": instrument_type, "instrument_id": instrument_id, "timeout": timeout},
+                )
+                return False, None
+            time.sleep(min(self.suspend, 0.05))
+        check, data = self.get_order(self.api.buy_order_id, timeout=timeout)
+        if not check or data is None:
+            self._set_last_operation(
+                "buy_order",
+                "rejected",
+                "order_lookup_failed",
+                {"order_id": self.api.buy_order_id},
+            )
+            return False, None
         while data["status"] == "pending_new":
-            check, data = self.get_order(self.api.buy_order_id)
-            time.sleep(1)
+            if timeout is not None and time.time() - start_t >= float(timeout):
+                self._set_last_operation(
+                    "buy_order",
+                    "timeout",
+                    "pending_new_timeout",
+                    {"order_id": self.api.buy_order_id, "timeout": timeout},
+                )
+                return False, None
+            check, data = self.get_order(self.api.buy_order_id, timeout=timeout)
+            if not check or data is None:
+                self._set_last_operation(
+                    "buy_order",
+                    "rejected",
+                    "order_lookup_failed",
+                    {"order_id": self.api.buy_order_id},
+                )
+                return False, None
+            time.sleep(min(self.suspend, 1))
 
         if check:
             if data["status"] != "rejected":
+                self._set_last_operation(
+                    "buy_order",
+                    "ok",
+                    None,
+                    {"order_id": self.api.buy_order_id, "status": data.get("status")},
+                )
                 return True, self.api.buy_order_id
             else:
+                self._set_last_operation(
+                    "buy_order",
+                    "rejected",
+                    "broker_rejected",
+                    {"order_id": self.api.buy_order_id, "reject_status": data.get("reject_status")},
+                )
                 return False, data["reject_status"]
         else:
-
+            self._set_last_operation(
+                "buy_order",
+                "rejected",
+                "order_lookup_failed",
+                {"order_id": self.api.buy_order_id},
+            )
             return False, None
 
-    def change_auto_margin_call(self, ID_Name, ID, auto_margin_call):
+    def change_auto_margin_call(self, ID_Name, ID, auto_margin_call, timeout=10):
         self.api.auto_margin_call_changed_respond = None
         self.api.change_auto_margin_call(ID_Name, ID, auto_margin_call)
-        while self.api.auto_margin_call_changed_respond == None:
-            pass
+        if not self._wait_for_api_attr("auto_margin_call_changed_respond", timeout):
+            self._set_last_operation(
+                "change_auto_margin_call",
+                "timeout",
+                "timeout",
+                {"id_name": ID_Name, "id": ID, "timeout": timeout},
+            )
+            return False, None
         if self.api.auto_margin_call_changed_respond["status"] == 2000:
+            self._set_last_operation(
+                "change_auto_margin_call",
+                "ok",
+                None,
+                {"id_name": ID_Name, "id": ID},
+            )
             return True, self.api.auto_margin_call_changed_respond
         else:
+            self._set_last_operation(
+                "change_auto_margin_call",
+                "rejected",
+                "broker_status",
+                {"id_name": ID_Name, "id": ID, "status": self.api.auto_margin_call_changed_respond.get("status")},
+            )
             return False, self.api.auto_margin_call_changed_respond
 
     def change_order(self, ID_Name, order_id,
                      stop_lose_kind, stop_lose_value,
                      take_profit_kind, take_profit_value,
-                     use_trail_stop, auto_margin_call):
+                     use_trail_stop, auto_margin_call, timeout=10):
         check = True
         if ID_Name == "position_id":
-            check, order_data = self.get_order(order_id)
+            check, order_data = self.get_order(order_id, timeout=timeout)
+            if not check or order_data is None:
+                logging.error('change_order fail to get position_id')
+                self._set_last_operation(
+                    "change_order",
+                    "rejected",
+                    "position_lookup_failed",
+                    {"order_id": order_id},
+                )
+                return False, None
             position_id = order_data["position_id"]
             ID = position_id
         elif ID_Name == "order_id":
             ID = order_id
         else:
             logging.error('change_order input error ID_Name')
+            self._set_last_operation(
+                "change_order",
+                "rejected",
+                "invalid_id_name",
+                {"id_name": ID_Name, "order_id": order_id},
+            )
+            return False, None
 
         if check:
             self.api.tpsl_changed_respond = None
@@ -1713,15 +1797,39 @@ class IQ_Option:
                 take_profit_kind=take_profit_kind, take_profit_value=take_profit_value,
                 use_trail_stop=use_trail_stop)
             self.change_auto_margin_call(
-                ID_Name=ID_Name, ID=ID, auto_margin_call=auto_margin_call)
-            while self.api.tpsl_changed_respond == None:
-                pass
+                ID_Name=ID_Name, ID=ID, auto_margin_call=auto_margin_call, timeout=timeout)
+            if not self._wait_for_api_attr("tpsl_changed_respond", timeout):
+                self._set_last_operation(
+                    "change_order",
+                    "timeout",
+                    "timeout",
+                    {"id_name": ID_Name, "id": ID, "timeout": timeout},
+                )
+                return False, None
             if self.api.tpsl_changed_respond["status"] == 2000:
+                self._set_last_operation(
+                    "change_order",
+                    "ok",
+                    None,
+                    {"id_name": ID_Name, "id": ID},
+                )
                 return True, self.api.tpsl_changed_respond["msg"]
             else:
+                self._set_last_operation(
+                    "change_order",
+                    "rejected",
+                    "broker_status",
+                    {"id_name": ID_Name, "id": ID, "status": self.api.tpsl_changed_respond.get("status")},
+                )
                 return False, self.api.tpsl_changed_respond
         else:
             logging.error('change_order fail to get position_id')
+            self._set_last_operation(
+                "change_order",
+                "rejected",
+                "position_lookup_failed",
+                {"order_id": order_id},
+            )
             return False, None
 
     def get_async_order(self, buy_order_id):
