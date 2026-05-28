@@ -56,6 +56,10 @@ Status: implementado parcialmente nesta branch.
   busy-wait puro.
 - Tornar `get_optioninfo`, `get_optioninfo_v2`, `sell_option` e
   `get_strike_list` limitados por timeout, com `sleep` curto e diagnostico.
+- Tornar consultas digitais e de portfolio (`get_digital_position`,
+  `get_position_history`, `get_available_leverages`, `cancel_order`,
+  `close_position`, `get_overnight_fee`) limitadas por timeout e observaveis
+  via `last_operation`.
 
 ## Fase 3 - Estado por instancia
 

@@ -143,6 +143,14 @@ class IQ_Option:
             "timestamp": time.time(),
         }
 
+    def _wait_for_api_attr(self, attr_name, timeout=10):
+        start = time.time()
+        while getattr(self.api, attr_name) == None:
+            if timeout is not None and time.time() - start >= float(timeout):
+                return False
+            time.sleep(min(self.suspend, 0.05))
+        return True
+
     def get_api_diagnostics(self):
         api = getattr(self, "api", None)
         return {
@@ -1788,83 +1796,220 @@ class IQ_Option:
 
     # this function is heavy
 
-    def get_digital_position_by_position_id(self, position_id):
+    def get_digital_position_by_position_id(self, position_id, timeout=10):
         self.api.position = None
         self.api.get_digital_position(position_id)
-        while self.api.position == None:
-            pass
+        if not self._wait_for_api_attr("position", timeout):
+            self._set_last_operation(
+                "get_digital_position_by_position_id",
+                "timeout",
+                "timeout",
+                {"position_id": position_id, "timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "get_digital_position_by_position_id",
+            "ok",
+            None,
+            {"position_id": position_id},
+        )
         return self.api.position
 
-    def get_digital_position(self, order_id):
+    def get_digital_position(self, order_id, timeout=10):
         self.api.position = None
+        start = time.time()
         while self.get_async_order(order_id)["position-changed"] == {}:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_digital_position",
+                    "timeout",
+                    "position_changed_timeout",
+                    {"order_id": order_id, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
         position_id = self.get_async_order(order_id)["position-changed"]["msg"]["external_id"]
         self.api.get_digital_position(position_id)
-        while self.api.position == None:
-            pass
+        if not self._wait_for_api_attr("position", timeout):
+            self._set_last_operation(
+                "get_digital_position",
+                "timeout",
+                "position_timeout",
+                {"order_id": order_id, "position_id": position_id, "timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "get_digital_position",
+            "ok",
+            None,
+            {"order_id": order_id, "position_id": position_id},
+        )
         return self.api.position
 
-    def get_position_history(self, instrument_type):
+    def get_position_history(self, instrument_type, timeout=10):
         self.api.position_history = None
         self.api.get_position_history(instrument_type)
-        while self.api.position_history == None:
-            pass
-
-        if self.api.position_history["status"] == 2000:
-            return True, self.api.position_history["msg"]
-        else:
+        if not self._wait_for_api_attr("position_history", timeout):
+            self._set_last_operation(
+                "get_position_history",
+                "timeout",
+                "timeout",
+                {"instrument_type": instrument_type, "timeout": timeout},
+            )
             return False, None
 
-    def get_position_history_v2(self, instrument_type, limit, offset, start, end):
+        if self.api.position_history["status"] == 2000:
+            self._set_last_operation(
+                "get_position_history",
+                "ok",
+                None,
+                {"instrument_type": instrument_type},
+            )
+            return True, self.api.position_history["msg"]
+        else:
+            self._set_last_operation(
+                "get_position_history",
+                "rejected",
+                "broker_status",
+                {"instrument_type": instrument_type, "status": self.api.position_history.get("status")},
+            )
+            return False, None
+
+    def get_position_history_v2(self, instrument_type, limit, offset, start, end, timeout=10):
         # instrument_type=crypto forex fx-option multi-option cfd digital-option turbo-option
         self.api.position_history_v2 = None
         self.api.get_position_history_v2(
             instrument_type, limit, offset, start, end)
-        while self.api.position_history_v2 == None:
-            pass
-
-        if self.api.position_history_v2["status"] == 2000:
-            return True, self.api.position_history_v2["msg"]
-        else:
+        if not self._wait_for_api_attr("position_history_v2", timeout):
+            self._set_last_operation(
+                "get_position_history_v2",
+                "timeout",
+                "timeout",
+                {"instrument_type": instrument_type, "timeout": timeout},
+            )
             return False, None
 
-    def get_available_leverages(self, instrument_type, actives=""):
+        if self.api.position_history_v2["status"] == 2000:
+            self._set_last_operation(
+                "get_position_history_v2",
+                "ok",
+                None,
+                {"instrument_type": instrument_type, "limit": limit, "offset": offset},
+            )
+            return True, self.api.position_history_v2["msg"]
+        else:
+            self._set_last_operation(
+                "get_position_history_v2",
+                "rejected",
+                "broker_status",
+                {"instrument_type": instrument_type, "status": self.api.position_history_v2.get("status")},
+            )
+            return False, None
+
+    def get_available_leverages(self, instrument_type, actives="", timeout=10):
         self.api.available_leverages = None
         if actives == "":
             self.api.get_available_leverages(instrument_type, "")
         else:
+            if actives not in OP_code.ACTIVES:
+                self._set_last_operation(
+                    "get_available_leverages",
+                    "rejected",
+                    "invalid_active",
+                    {"instrument_type": instrument_type, "active": actives},
+                )
+                return False, None
             self.api.get_available_leverages(
                 instrument_type, OP_code.ACTIVES[actives])
-        while self.api.available_leverages == None:
-            pass
+        if not self._wait_for_api_attr("available_leverages", timeout):
+            self._set_last_operation(
+                "get_available_leverages",
+                "timeout",
+                "timeout",
+                {"instrument_type": instrument_type, "active": actives, "timeout": timeout},
+            )
+            return False, None
         if self.api.available_leverages["status"] == 2000:
+            self._set_last_operation(
+                "get_available_leverages",
+                "ok",
+                None,
+                {"instrument_type": instrument_type, "active": actives},
+            )
             return True, self.api.available_leverages["msg"]
         else:
+            self._set_last_operation(
+                "get_available_leverages",
+                "rejected",
+                "broker_status",
+                {"instrument_type": instrument_type, "status": self.api.available_leverages.get("status")},
+            )
             return False, None
 
-    def cancel_order(self, buy_order_id):
+    def cancel_order(self, buy_order_id, timeout=10):
         self.api.order_canceled = None
         self.api.cancel_order(buy_order_id)
-        while self.api.order_canceled == None:
-            pass
+        if not self._wait_for_api_attr("order_canceled", timeout):
+            self._set_last_operation(
+                "cancel_order",
+                "timeout",
+                "timeout",
+                {"order_id": buy_order_id, "timeout": timeout},
+            )
+            return False
         if self.api.order_canceled["status"] == 2000:
+            self._set_last_operation(
+                "cancel_order",
+                "ok",
+                None,
+                {"order_id": buy_order_id},
+            )
             return True
         else:
+            self._set_last_operation(
+                "cancel_order",
+                "rejected",
+                "broker_status",
+                {"order_id": buy_order_id, "status": self.api.order_canceled.get("status")},
+            )
             return False
 
-    def close_position(self, position_id):
-        check, data = self.get_order(position_id)
-        if data["position_id"] != None:
+    def close_position(self, position_id, timeout=10):
+        check, data = self.get_order(position_id, timeout=timeout)
+        if check and data is not None and data["position_id"] != None:
             self.api.close_position_data = None
             self.api.close_position(data["position_id"])
-            while self.api.close_position_data == None:
-                pass
+            if not self._wait_for_api_attr("close_position_data", timeout):
+                self._set_last_operation(
+                    "close_position",
+                    "timeout",
+                    "timeout",
+                    {"position_id": position_id, "timeout": timeout},
+                )
+                return False
             if self.api.close_position_data["status"] == 2000:
+                self._set_last_operation(
+                    "close_position",
+                    "ok",
+                    None,
+                    {"position_id": position_id},
+                )
                 return True
             else:
+                self._set_last_operation(
+                    "close_position",
+                    "rejected",
+                    "broker_status",
+                    {"position_id": position_id, "status": self.api.close_position_data.get("status")},
+                )
                 return False
         else:
+            self._set_last_operation(
+                "close_position",
+                "rejected",
+                "missing_position",
+                {"position_id": position_id},
+            )
             return False
 
     def close_position_v2(self, position_id):
@@ -1879,14 +2024,40 @@ class IQ_Option:
         else:
             return False
 
-    def get_overnight_fee(self, instrument_type, active):
+    def get_overnight_fee(self, instrument_type, active, timeout=10):
+        if active not in OP_code.ACTIVES:
+            self._set_last_operation(
+                "get_overnight_fee",
+                "rejected",
+                "invalid_active",
+                {"instrument_type": instrument_type, "active": active},
+            )
+            return False, None
         self.api.overnight_fee = None
         self.api.get_overnight_fee(instrument_type, OP_code.ACTIVES[active])
-        while self.api.overnight_fee == None:
-            pass
+        if not self._wait_for_api_attr("overnight_fee", timeout):
+            self._set_last_operation(
+                "get_overnight_fee",
+                "timeout",
+                "timeout",
+                {"instrument_type": instrument_type, "active": active, "timeout": timeout},
+            )
+            return False, None
         if self.api.overnight_fee["status"] == 2000:
+            self._set_last_operation(
+                "get_overnight_fee",
+                "ok",
+                None,
+                {"instrument_type": instrument_type, "active": active},
+            )
             return True, self.api.overnight_fee["msg"]
         else:
+            self._set_last_operation(
+                "get_overnight_fee",
+                "rejected",
+                "broker_status",
+                {"instrument_type": instrument_type, "status": self.api.overnight_fee.get("status")},
+            )
             return False, None
 
     def get_option_open_by_other_pc(self):
