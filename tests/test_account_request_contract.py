@@ -1,5 +1,6 @@
 import unittest
 
+import iqoptionapi.global_value as global_value
 import iqoptionapi.stable_api as stable_api
 from iqoptionapi.stable_api import IQ_Option
 
@@ -9,6 +10,9 @@ class _Profile:
 
 
 class TestAccountRequestContract(unittest.TestCase):
+    def setUp(self):
+        global_value.balance_id = 10
+
     def test_get_leader_board_times_out(self):
         api = IQ_Option("email", "password")
 
@@ -100,6 +104,75 @@ class TestAccountRequestContract(unittest.TestCase):
         self.assertIsNone(api.reset_practice_balance(timeout=0.01))
         self.assertEqual(api.last_operation["name"], "reset_practice_balance")
         self.assertEqual(api.last_operation["status"], "timeout")
+
+    def test_get_balance_and_currency_handle_missing_balances(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            balances_raw = None
+
+            def get_balances(self):
+                pass
+
+        api.api = _FakeApi()
+
+        self.assertIsNone(api.get_balance(timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "get_balance")
+        self.assertEqual(api.last_operation["reason"], "balances_timeout")
+
+        self.assertIsNone(api.get_currency(timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "get_currency")
+        self.assertEqual(api.last_operation["reason"], "balances_timeout")
+
+    def test_get_balance_and_currency_record_success(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            balances_raw = None
+
+            def get_balances(self):
+                self.balances_raw = {
+                    "msg": [
+                        {"id": 10, "amount": 123.45, "currency": "USD"},
+                    ]
+                }
+
+        api.api = _FakeApi()
+
+        self.assertEqual(api.get_balance(timeout=1), 123.45)
+        self.assertEqual(api.last_operation["name"], "get_balance")
+        self.assertEqual(api.last_operation["status"], "ok")
+
+        self.assertEqual(api.get_currency(timeout=1), "USD")
+        self.assertEqual(api.last_operation["name"], "get_currency")
+        self.assertEqual(api.last_operation["status"], "ok")
+
+    def test_get_balance_mode_handles_missing_profile(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            profile = _Profile()
+
+        api.api = _FakeApi()
+
+        self.assertIsNone(api.get_balance_mode(timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "get_balance_mode")
+        self.assertEqual(api.last_operation["reason"], "profile_timeout")
+
+    def test_get_balance_mode_records_success(self):
+        api = IQ_Option("email", "password")
+
+        class _ProfileWithBalance:
+            msg = {"balances": [{"id": 10, "type": 4}]}
+
+        class _FakeApi:
+            profile = _ProfileWithBalance()
+
+        api.api = _FakeApi()
+
+        self.assertEqual(api.get_balance_mode(timeout=1), "PRACTICE")
+        self.assertEqual(api.last_operation["name"], "get_balance_mode")
+        self.assertEqual(api.last_operation["status"], "ok")
 
 
 if __name__ == "__main__":

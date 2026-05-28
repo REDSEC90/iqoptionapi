@@ -71,6 +71,8 @@ Status: implementado parcialmente nesta branch.
   `reset_practice_balance`) limitadas por timeout e sem busy-wait puro.
 - Tornar `get_all_init` limitado por timeout total, inclusive quando o broker
   nunca retorna `isSuccessful=True` ou a chamada precisa reconectar.
+- Fazer `get_balance`, `get_currency` e `get_balance_mode` tratarem timeouts
+  dos caches base sem levantar erro por acesso a `None`.
 
 ## Fase 3 - Estado por instancia
 

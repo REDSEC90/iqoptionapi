@@ -571,11 +571,32 @@ class IQ_Option:
                 logging.error('**error** get_profile try reconnect')
                 self.connect()"""
 
-    def get_currency(self):
-        balances_raw = self.get_balances()
+    def get_currency(self, timeout=10):
+        balances_raw = self.get_balances(timeout=timeout)
+        if not balances_raw:
+            self._set_last_operation(
+                "get_currency",
+                "timeout",
+                "balances_timeout",
+                {"timeout": timeout},
+            )
+            return None
         for balance in balances_raw["msg"]:
             if balance["id"] == global_value.balance_id:
+                self._set_last_operation(
+                    "get_currency",
+                    "ok",
+                    None,
+                    {"balance_id": global_value.balance_id},
+                )
                 return balance["currency"]
+        self._set_last_operation(
+            "get_currency",
+            "rejected",
+            "missing_balance",
+            {"balance_id": global_value.balance_id},
+        )
+        return None
 
     def get_balance_id(self):
         return global_value.balance_id
@@ -593,12 +614,33 @@ class IQ_Option:
             time.sleep(self.suspend)
         return self.api.profile.balance"""
 
-    def get_balance(self):
+    def get_balance(self, timeout=10):
 
-        balances_raw = self.get_balances()
+        balances_raw = self.get_balances(timeout=timeout)
+        if not balances_raw:
+            self._set_last_operation(
+                "get_balance",
+                "timeout",
+                "balances_timeout",
+                {"timeout": timeout},
+            )
+            return None
         for balance in balances_raw["msg"]:
             if balance["id"] == global_value.balance_id:
+                self._set_last_operation(
+                    "get_balance",
+                    "ok",
+                    None,
+                    {"balance_id": global_value.balance_id},
+                )
                 return balance["amount"]
+        self._set_last_operation(
+            "get_balance",
+            "rejected",
+            "missing_balance",
+            {"balance_id": global_value.balance_id},
+        )
+        return None
 
     def get_balances(self, timeout=10):
         self.api.balances_raw = None
@@ -619,15 +661,42 @@ class IQ_Option:
         )
         return self.api.balances_raw
 
-    def get_balance_mode(self):
+    def get_balance_mode(self, timeout=10):
         # self.api.profile.balance_type=None
-        profile = self.get_profile_ansyc()
+        profile = self.get_profile_ansyc(timeout=timeout)
+        if not profile:
+            self._set_last_operation(
+                "get_balance_mode",
+                "timeout",
+                "profile_timeout",
+                {"timeout": timeout},
+            )
+            return None
         for balance in profile["balances"]:
             if balance["id"] == global_value.balance_id:
                 if balance["type"] == 1:
+                    self._set_last_operation(
+                        "get_balance_mode",
+                        "ok",
+                        None,
+                        {"balance_id": global_value.balance_id},
+                    )
                     return "REAL"
                 elif balance["type"] == 4:
+                    self._set_last_operation(
+                        "get_balance_mode",
+                        "ok",
+                        None,
+                        {"balance_id": global_value.balance_id},
+                    )
                     return "PRACTICE"
+        self._set_last_operation(
+            "get_balance_mode",
+            "rejected",
+            "missing_balance",
+            {"balance_id": global_value.balance_id},
+        )
+        return None
 
     def reset_practice_balance(self, timeout=10):
         self.api.training_balance_reset_request = None
