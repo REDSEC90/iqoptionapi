@@ -561,15 +561,25 @@ class IQ_Option:
             )
             return []
         self.api.candles.candles_data = None
+        req_id = _new_request_id("candles")
         start = time.time()
         while True:
             try:
-                self.api.getcandles(
-                    OP_code.ACTIVES[ACTIVES], interval, count, endtime)
+                try:
+                    self.api.getcandles(
+                        OP_code.ACTIVES[ACTIVES], interval, count, endtime, request_id=req_id)
+                except TypeError:
+                    self.api.getcandles(
+                        OP_code.ACTIVES[ACTIVES], interval, count, endtime)
                 while self.check_connect() and self.api.candles.candles_data == None:
                     if timeout and time.time() - start >= float(timeout):
                         logging.error('**error** get_candles timeout')
-                        self._set_last_operation("get_candles", "timeout", "timeout", {"active": ACTIVES})
+                        self._set_last_operation(
+                            "get_candles",
+                            "timeout",
+                            "timeout",
+                            {"active": ACTIVES, "request_id": req_id},
+                        )
                         return []
                     time.sleep(self.suspend)
                 if self.api.candles.candles_data != None:
@@ -577,7 +587,12 @@ class IQ_Option:
             except:
                 if timeout and time.time() - start >= float(timeout):
                     logging.error('**error** get_candles timeout')
-                    self._set_last_operation("get_candles", "timeout", "timeout", {"active": ACTIVES})
+                    self._set_last_operation(
+                        "get_candles",
+                        "timeout",
+                        "timeout",
+                        {"active": ACTIVES, "request_id": req_id},
+                    )
                     return []
                 logging.error('**error** get_candles need reconnect')
                 self.connect()
@@ -587,7 +602,7 @@ class IQ_Option:
             "get_candles",
             "ok",
             None,
-            {"active": ACTIVES, "interval": interval, "count": len(candles)},
+            {"active": ACTIVES, "interval": interval, "count": len(candles), "request_id": req_id},
         )
         return candles
 

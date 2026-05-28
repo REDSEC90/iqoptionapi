@@ -85,6 +85,8 @@ Status: iniciado nesta branch.
 - Preservar dados sensiveis fora de logs.
 - Expor `last_operation` com nome, status, motivo, payload resumido e timestamp
   para diagnostico simples de chamadas publicas.
+- Propagar `request_id` em `get-candles` e registrar esse identificador em
+  `last_operation`.
 
 ## Fase 6 - Testes e gates
 
