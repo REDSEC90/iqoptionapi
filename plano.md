@@ -49,10 +49,14 @@ Status: implementado parcialmente nesta branch.
 
 ## Fase 3 - Estado por instancia
 
+Status: iniciado nesta branch.
+
 - Mover atributos mutaveis de classe para `__init__`.
 - Reduzir dependencia de `global_value`.
 - Criar locks por instancia para websocket, ordens, candles e resultados.
 - Usar `request_id` unico por operacao.
+- Inicializar caches mutaveis de resultado, candles, ordens, perfil e dados de
+  websocket por instancia de `IQOptionAPI`.
 
 ## Fase 4 - Compra e candles
 
