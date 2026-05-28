@@ -29,3 +29,23 @@ class TestCheckWinV4(unittest.TestCase):
 
         api.api = _FakeSocket()
         self.assertEqual(api.check_win_v4(9999, timeout=1), (False, None))
+
+    def test_check_win_v4_reads_option_closed_async_order(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeSocket:
+            socket_option_closed = {}
+            order_async = {
+                2001: {
+                    "option-closed": {
+                        "msg": {
+                            "option_id": 2001,
+                            "profit_amount": "18.00",
+                            "amount": "8.00",
+                        }
+                    }
+                }
+            }
+
+        api.api = _FakeSocket()
+        self.assertEqual(api.check_win_v4(2001, timeout=1), (True, 10.0))

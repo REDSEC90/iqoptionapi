@@ -24,8 +24,7 @@ class GetCandles(Base):
                         "active_id":int(active_id),
                         "size":interval,#time size sample:if interval set 1 mean get time 0~1 candle 
                         "to":int(endtime),   #int(self.api.timesync.server_timestamp),
-                        "count":count,#get how many candle
-                        "":active_id
+                        "count":count#get how many candle
                         }
                 }
 

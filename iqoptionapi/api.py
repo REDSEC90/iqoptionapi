@@ -262,11 +262,13 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
          
          
         while (global_value.ssl_Mutual_exclusion or global_value.ssl_Mutual_exclusion_write) and no_force_send:
-            pass
+            time.sleep(0.001)
         global_value.ssl_Mutual_exclusion_write=True
-        self.websocket.send(data)
-        logger.debug(data)
-        global_value.ssl_Mutual_exclusion_write=False
+        try:
+            self.websocket.send(data)
+            logger.debug(data)
+        finally:
+            global_value.ssl_Mutual_exclusion_write=False
         
     @property
     def logout(self):
@@ -727,6 +729,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                                  "check_hostname": False, "cert_reqs": ssl.CERT_NONE, "ca_certs": "cacert.pem"}})  # for fix pyinstall error: cafile, capath and cadata cannot be all omitted
         self.websocket_thread.daemon = True
         self.websocket_thread.start()
+        start = time.time()
         while True:
             try:
                 if global_value.check_websocket_if_error:
@@ -738,7 +741,9 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
             except:
                 pass
 
-            pass
+            if time.time() - start > 30:
+                return False,"Websocket connection timeout."
+            time.sleep(0.05)
     def get_ssid(self):
         response=None
         try:
@@ -751,8 +756,11 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     def send_ssid(self):
         self.profile.msg=None
         self.ssid(global_value.SSID)  # pylint: disable=not-callable
+        start = time.time()
         while self.profile.msg==None:
-            pass
+            if time.time() - start > 30:
+                return False
+            time.sleep(0.05)
         if self.profile.msg==False:
             return False
         else:
@@ -803,12 +811,16 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         
 
         self.timesync.server_timestamp = None
+        start = time.time()
         while True:
             try:
                 if self.timesync.server_timestamp != None:
                     break
             except:
                 pass
+            if time.time() - start > 30:
+                return False,"timeSync timeout"
+            time.sleep(0.05)
         return True,None
 
     def close(self):
