@@ -365,20 +365,45 @@ class IQ_Option:
                 ["actives"][i]["name"]).split(".")[1]] = int(i)
 
     # _________________________self.api.get_api_option_init_all() wss______________________
-    def get_all_init(self):
+    def get_all_init(self, timeout=30):
 
+        start_total = time.time()
         while True:
+            if timeout is not None and time.time() - start_total >= float(timeout):
+                self._set_last_operation(
+                    "get_all_init",
+                    "timeout",
+                    "timeout",
+                    {"timeout": timeout},
+                )
+                return None
             self.api.api_option_init_all_result = None
             while True:
                 try:
                     self.api.get_api_option_init_all()
                     break
                 except:
+                    if timeout is not None and time.time() - start_total >= float(timeout):
+                        self._set_last_operation(
+                            "get_all_init",
+                            "timeout",
+                            "timeout",
+                            {"timeout": timeout},
+                        )
+                        return None
                     logging.error('**error** get_all_init need reconnect')
                     self.connect()
-                    time.sleep(5)
+                    time.sleep(min(5, float(timeout)) if timeout else 5)
             start = time.time()
             while True:
+                if timeout is not None and time.time() - start_total >= float(timeout):
+                    self._set_last_operation(
+                        "get_all_init",
+                        "timeout",
+                        "timeout",
+                        {"timeout": timeout},
+                    )
+                    return None
                 if time.time() - start > 30:
                     logging.error('**warning** get_all_init late 30 sec')
                     break
@@ -387,8 +412,15 @@ class IQ_Option:
                         break
                 except:
                     pass
+                time.sleep(min(self.suspend, 0.05))
             try:
                 if self.api.api_option_init_all_result["isSuccessful"] == True:
+                    self._set_last_operation(
+                        "get_all_init",
+                        "ok",
+                        None,
+                        None,
+                    )
                     return self.api.api_option_init_all_result
             except:
                 pass

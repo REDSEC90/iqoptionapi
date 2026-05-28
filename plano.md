@@ -69,6 +69,8 @@ Status: implementado parcialmente nesta branch.
 - Tornar chamadas de suporte de conta/listagem (`get_leader_board`,
   `get_instruments`, `get_all_init_v2`, `get_profile_ansyc`, `get_balances`,
   `reset_practice_balance`) limitadas por timeout e sem busy-wait puro.
+- Tornar `get_all_init` limitado por timeout total, inclusive quando o broker
+  nunca retorna `isSuccessful=True` ou a chamada precisa reconectar.
 
 ## Fase 3 - Estado por instancia
 
