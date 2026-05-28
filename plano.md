@@ -91,6 +91,8 @@ Status: iniciado nesta branch.
   para diagnostico simples de chamadas publicas.
 - Propagar `request_id` em `get-candles` e registrar esse identificador em
   `last_operation`.
+- Registrar erro de processamento websocket em `websocket_last_message_error`
+  sem deixar mensagem malformada prender mutex ou derrubar o handler.
 
 ## Fase 6 - Testes e gates
 

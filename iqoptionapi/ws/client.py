@@ -55,6 +55,15 @@ class WebsocketClient(object):
         global_value.ssl_Mutual_exclusion=True
         try:
             self._process_message(message)
+        except Exception as exc:
+            logging.getLogger(__name__).exception("failed to process websocket message")
+            try:
+                self.api.websocket_last_message_error = {
+                    "type": type(exc).__name__,
+                    "message": str(exc),
+                }
+            except Exception:
+                pass
         finally:
             global_value.ssl_Mutual_exclusion=False
 

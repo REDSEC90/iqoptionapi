@@ -157,6 +157,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.wss_url = "wss://{host}/echo/websocket".format(host=host)
         self.websocket_client = None
         self._send_lock = threading.Lock()
+        self.websocket_last_message_error = None
         self.socket_option_opened = {}
         self.socket_option_closed = {}
         self.timesync = TimeSync()
