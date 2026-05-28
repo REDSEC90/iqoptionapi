@@ -267,11 +267,23 @@ class IQ_Option:
         except:
             return None
 
-    def get_financial_information(self, activeId):
+    def get_financial_information(self, activeId, timeout=10):
         self.api.financial_information = None
         self.api.get_financial_information(activeId)
-        while self.api.financial_information == None:
-            pass
+        if not self._wait_for_api_attr("financial_information", timeout):
+            self._set_last_operation(
+                "get_financial_information",
+                "timeout",
+                "timeout",
+                {"active_id": activeId, "timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "get_financial_information",
+            "ok",
+            None,
+            {"active_id": activeId},
+        )
         return self.api.financial_information
 
     def get_leader_board(self, country, from_position, to_position, near_traders_count, user_country_id=0,

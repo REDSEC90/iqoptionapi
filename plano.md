@@ -64,6 +64,8 @@ Status: implementado parcialmente nesta branch.
   timeout, com diagnostico de aceite, rejeicao e pendencia.
 - Tornar resultados legados (`check_win`, `check_win_v2`, `check_win_v3`)
   limitados por timeout e consistentes com o calculo normalizado de lucro.
+- Tornar `get_financial_information` limitado por timeout e observavel via
+  `last_operation`.
 
 ## Fase 3 - Estado por instancia
 
