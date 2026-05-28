@@ -25,6 +25,13 @@ class TestInstanceState(unittest.TestCase):
         self.assertIsNone(second.candles.candles_data)
         self.assertEqual(second.real_time_candles["EURUSD-OTC"][60], {})
 
+    def test_close_and_websocket_alive_are_safe_before_connect(self):
+        api = IQOptionAPI("iqoption.com", "first@example.test", "password")
+
+        api.close()
+
+        self.assertFalse(api.websocket_alive())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -871,11 +871,16 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         return True,None
 
     def close(self):
-        self.websocket.close()
-        self.websocket_thread.join()
+        websocket = getattr(getattr(self, "websocket_client", None), "wss", None)
+        if websocket is not None:
+            websocket.close()
+        websocket_thread = getattr(self, "websocket_thread", None)
+        if websocket_thread is not None and websocket_thread.is_alive():
+            websocket_thread.join(timeout=5)
 
     def websocket_alive(self):
-        return self.websocket_thread.is_alive()
+        websocket_thread = getattr(self, "websocket_thread", None)
+        return websocket_thread is not None and websocket_thread.is_alive()
 
     @property
     def Get_User_Profile_Client(self):

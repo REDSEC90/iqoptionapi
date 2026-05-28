@@ -57,6 +57,8 @@ Status: iniciado nesta branch.
 - Usar `request_id` unico por operacao.
 - Inicializar caches mutaveis de resultado, candles, ordens, perfil e dados de
   websocket por instancia de `IQOptionAPI`.
+- Tornar `close()` e `websocket_alive()` seguros antes ou apos falha parcial de
+  conexao.
 
 ## Fase 4 - Compra e candles
 
