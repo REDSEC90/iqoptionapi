@@ -73,6 +73,8 @@ Status: implementado parcialmente nesta branch.
   nunca retorna `isSuccessful=True` ou a chamada precisa reconectar.
 - Fazer `get_balance`, `get_currency` e `get_balance_mode` tratarem timeouts
   dos caches base sem levantar erro por acesso a `None`.
+- Fazer `change_balance` respeitar timeout do perfil, retornar status booleano
+  e rejeitar modo invalido sem encerrar o processo.
 
 ## Fase 3 - Estado por instancia
 

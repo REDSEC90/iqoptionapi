@@ -174,6 +174,62 @@ class TestAccountRequestContract(unittest.TestCase):
         self.assertEqual(api.last_operation["name"], "get_balance_mode")
         self.assertEqual(api.last_operation["status"], "ok")
 
+    def test_change_balance_handles_missing_profile(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            profile = _Profile()
+
+        api.api = _FakeApi()
+
+        self.assertFalse(api.change_balance("PRACTICE", timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "change_balance")
+        self.assertEqual(api.last_operation["reason"], "profile_timeout")
+
+    def test_change_balance_rejects_invalid_mode_without_exit(self):
+        api = IQ_Option("email", "password")
+
+        class _ProfileWithBalance:
+            msg = {"balances": [{"id": 10, "type": 4}]}
+
+        class _FakeApi:
+            profile = _ProfileWithBalance()
+
+        api.api = _FakeApi()
+
+        self.assertFalse(api.change_balance("BAD", timeout=1))
+        self.assertEqual(api.last_operation["name"], "change_balance")
+        self.assertEqual(api.last_operation["reason"], "invalid_mode")
+
+    def test_change_balance_records_success(self):
+        api = IQ_Option("email", "password")
+
+        class _ProfileWithBalance:
+            msg = {
+                "balances": [
+                    {"id": 11, "type": 1},
+                    {"id": 22, "type": 4},
+                ]
+            }
+
+        class _FakeApi:
+            profile = _ProfileWithBalance()
+
+            def __init__(self):
+                self.portfolio_calls = []
+
+            def portfolio(self, **kwargs):
+                self.portfolio_calls.append(kwargs)
+
+        fake = _FakeApi()
+        api.api = fake
+
+        self.assertTrue(api.change_balance("PRACTICE", timeout=1))
+        self.assertEqual(global_value.balance_id, 22)
+        self.assertEqual(api.last_operation["name"], "change_balance")
+        self.assertEqual(api.last_operation["status"], "ok")
+        self.assertTrue(fake.portfolio_calls)
+
 
 if __name__ == "__main__":
     unittest.main()

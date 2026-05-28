@@ -728,7 +728,7 @@ class IQ_Option:
         for ins in instrument_type:
             self.api.portfolio(Main_Name=Main_Name, name="portfolio.order-changed", instrument_type=ins)
 
-    def change_balance(self, Balance_MODE):
+    def change_balance(self, Balance_MODE, timeout=10):
         def set_id(b_id):
             if global_value.balance_id != None:
                 self.position_change_all("unsubscribeMessage", global_value.balance_id)
@@ -740,7 +740,17 @@ class IQ_Option:
         real_id = None
         practice_id = None
 
-        for balance in self.get_profile_ansyc()["balances"]:
+        profile = self.get_profile_ansyc(timeout=timeout)
+        if not profile:
+            self._set_last_operation(
+                "change_balance",
+                "timeout",
+                "profile_timeout",
+                {"mode": Balance_MODE, "timeout": timeout},
+            )
+            return False
+
+        for balance in profile["balances"]:
             if balance["type"] == 1:
                 real_id = balance["id"]
             if balance["type"] == 4:
@@ -755,7 +765,20 @@ class IQ_Option:
 
         else:
             logging.error("ERROR doesn't have this mode")
-            exit(1)
+            self._set_last_operation(
+                "change_balance",
+                "rejected",
+                "invalid_mode",
+                {"mode": Balance_MODE},
+            )
+            return False
+        self._set_last_operation(
+            "change_balance",
+            "ok",
+            None,
+            {"mode": Balance_MODE, "balance_id": global_value.balance_id},
+        )
+        return True
 
     # ________________________________________________________________________
     # _______________________        CANDLE      _____________________________
