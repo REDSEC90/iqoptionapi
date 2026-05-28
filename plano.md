@@ -32,14 +32,20 @@ Status: implementado parcialmente nesta branch.
 - Cobrir o fluxo real `option-closed` em teste unitario.
 - Armazenar eventos fechados no cache consultado pelo OB-CC.
 - Reduzir busy-wait em compra, candles e handshake websocket.
+- Cobrir cache websocket de `option-closed` em teste unitario.
 
 ## Fase 2 - Timeouts e busy-wait
+
+Status: implementado parcialmente nesta branch.
 
 - Corrigir loops `pass` em `connect`, `send_ssid`, `get_candles`, `buy`,
   `get_order` e rotinas digitais.
 - Trocar spin loops por `threading.Event`, `Condition` ou sleep curto.
 - Adicionar timeout parametrizavel nas operacoes publicas.
 - Corrigir `while self.check_connect` para chamada real do metodo.
+- Adicionar timeout em `get_betinfo`, `get_order`, `get_pending`,
+  `get_positions`, `get_position`, `buy_multi`, `buy_digital_spot` e
+  `close_digital_option`.
 
 ## Fase 3 - Estado por instancia
 

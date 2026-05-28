@@ -796,8 +796,11 @@ class IQ_Option:
 
     # -------------------get infomation only for binary option------------------------
 
-    def get_betinfo(self, id_number):
+    def get_betinfo(self, id_number, timeout=10):
         # INPUT:int
+        deadline = None
+        if timeout and float(timeout) > 0:
+            deadline = time.monotonic() + float(timeout)
         while True:
             self.api.game_betinfo.isSuccessful = None
             start = time.time()
@@ -808,17 +811,20 @@ class IQ_Option:
                     '**error** def get_betinfo  self.api.get_betinfo reconnect')
                 self.connect()
             while self.api.game_betinfo.isSuccessful == None:
+                if deadline is not None and time.monotonic() >= deadline:
+                    logging.error('**error** get_betinfo timeout')
+                    return False, None
                 if time.time() - start > 10:
                     logging.error(
                         '**error** get_betinfo time out need reconnect')
                     self.connect()
                     self.api.get_betinfo(id_number)
-                    time.sleep(self.suspend * 10)
+                    start = time.time()
+                time.sleep(self.suspend)
             if self.api.game_betinfo.isSuccessful == True:
                 return self.api.game_betinfo.isSuccessful, self.api.game_betinfo.dict
             else:
                 return self.api.game_betinfo.isSuccessful, None
-            time.sleep(self.suspend * 10)
 
     def get_optioninfo(self, limit):
         self.api.api_game_getoptions_result = None
@@ -847,8 +853,12 @@ class IQ_Option:
             for idx in range(buy_len):
                 self.api.buyv3(
                     price[idx], OP_code.ACTIVES[ACTIVES[idx]], ACTION[idx], expirations[idx], idx)
+            start_t = time.time()
             while len(self.api.buy_multi_option) < buy_len:
-                pass
+                if time.time() - start_t >= 5:
+                    logging.error('**warning** buy_multi late 5 sec')
+                    return [None] * buy_len
+                time.sleep(0.01)
             buy_id = []
             for key in sorted(self.api.buy_multi_option.keys()):
                 try:
@@ -1061,8 +1071,12 @@ class IQ_Option:
         self.api.digital_option_placed_id = None
 
         self.api.place_digital_option(instrument_id, amount)
+        start_t = time.time()
         while self.api.digital_option_placed_id == None:
-            pass
+            if time.time() - start_t > 30:
+                logging.error('buy_digital_spot loss digital_option_placed_id')
+                return False, None
+            time.sleep(0.01)
         if isinstance(self.api.digital_option_placed_id, int):
             return True, self.api.digital_option_placed_id
         else:
@@ -1178,12 +1192,20 @@ class IQ_Option:
 
     def close_digital_option(self, position_id):
         self.api.result = None
+        start_t = time.time()
         while self.get_async_order(position_id)["position-changed"] == {}:
-            pass
+            if time.time() - start_t > 30:
+                logging.error('close_digital_option loss position-changed')
+                return False
+            time.sleep(0.01)
         position_changed = self.get_async_order(position_id)["position-changed"]["msg"]
         self.api.close_digital_option(position_changed["external_id"])
+        start_t = time.time()
         while self.api.result == None:
-            pass
+            if time.time() - start_t > 30:
+                logging.error('close_digital_option loss result')
+                return False
+            time.sleep(0.01)
         return self.api.result
 
     def check_win_digital(self, buy_order_id, polling_time):
@@ -1300,7 +1322,7 @@ class IQ_Option:
         # name': 'position-changed', 'microserviceName': "portfolio"/"digital-options"
         return self.api.order_async[buy_order_id]
 
-    def get_order(self, buy_order_id):
+    def get_order(self, buy_order_id, timeout=10):
         # self.api.order_data["status"]
         # reject:you can not get this order
         # pending_new:this order is working now
@@ -1308,41 +1330,59 @@ class IQ_Option:
         # new
         self.api.order_data = None
         self.api.get_order(buy_order_id)
+        start_t = time.time()
         while self.api.order_data == None:
-            pass
+            if timeout and time.time() - start_t >= float(timeout):
+                logging.error('**error** get_order timeout')
+                return False, None
+            time.sleep(self.suspend)
         if self.api.order_data["status"] == 2000:
             return True, self.api.order_data["msg"]
         else:
             return False, None
 
-    def get_pending(self, instrument_type):
+    def get_pending(self, instrument_type, timeout=10):
         self.api.deferred_orders = None
         self.api.get_pending(instrument_type)
+        start_t = time.time()
         while self.api.deferred_orders == None:
-            pass
+            if timeout and time.time() - start_t >= float(timeout):
+                logging.error('**error** get_pending timeout')
+                return False, None
+            time.sleep(self.suspend)
         if self.api.deferred_orders["status"] == 2000:
             return True, self.api.deferred_orders["msg"]
         else:
             return False, None
 
     # this function is heavy
-    def get_positions(self, instrument_type):
+    def get_positions(self, instrument_type, timeout=10):
         self.api.positions = None
         self.api.get_positions(instrument_type)
+        start_t = time.time()
         while self.api.positions == None:
-            pass
+            if timeout and time.time() - start_t >= float(timeout):
+                logging.error('**error** get_positions timeout')
+                return False, None
+            time.sleep(self.suspend)
         if self.api.positions["status"] == 2000:
             return True, self.api.positions["msg"]
         else:
             return False, None
 
-    def get_position(self, buy_order_id):
+    def get_position(self, buy_order_id, timeout=10):
         self.api.position = None
         check, order_data = self.get_order(buy_order_id)
+        if not check or order_data is None:
+            return False, None
         position_id = order_data["position_id"]
         self.api.get_position(position_id)
+        start_t = time.time()
         while self.api.position == None:
-            pass
+            if timeout and time.time() - start_t >= float(timeout):
+                logging.error('**error** get_position timeout')
+                return False, None
+            time.sleep(self.suspend)
         if self.api.position["status"] == 2000:
             return True, self.api.position["msg"]
         else:
