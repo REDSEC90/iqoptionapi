@@ -66,6 +66,9 @@ Status: implementado parcialmente nesta branch.
   limitados por timeout e consistentes com o calculo normalizado de lucro.
 - Tornar `get_financial_information` limitado por timeout e observavel via
   `last_operation`.
+- Tornar chamadas de suporte de conta/listagem (`get_leader_board`,
+  `get_instruments`, `get_all_init_v2`, `get_profile_ansyc`, `get_balances`,
+  `reset_practice_balance`) limitadas por timeout e sem busy-wait puro.
 
 ## Fase 3 - Estado por instancia
 

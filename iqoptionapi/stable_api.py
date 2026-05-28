@@ -287,29 +287,64 @@ class IQ_Option:
         return self.api.financial_information
 
     def get_leader_board(self, country, from_position, to_position, near_traders_count, user_country_id=0,
-                         near_traders_country_count=0, top_country_count=0, top_count=0, top_type=2):
+                         near_traders_country_count=0, top_country_count=0, top_count=0, top_type=2, timeout=10):
         self.api.leaderboard_deals_client = None
 
         country_id = Country.ID[country]
         self.api.Get_Leader_Board(country_id, user_country_id, from_position, to_position, near_traders_country_count,
                                   near_traders_count, top_country_count, top_count, top_type)
-        while self.api.leaderboard_deals_client == None:
-            pass
+        if not self._wait_for_api_attr("leaderboard_deals_client", timeout):
+            self._set_last_operation(
+                "get_leader_board",
+                "timeout",
+                "timeout",
+                {"country": country, "timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "get_leader_board",
+            "ok",
+            None,
+            {"country": country},
+        )
         return self.api.leaderboard_deals_client
 
-    def get_instruments(self, type):
+    def get_instruments(self, type, timeout=10):
         # type="crypto"/"forex"/"cfd"
         time.sleep(self.suspend)
         self.api.instruments = None
+        start_total = time.time()
         while self.api.instruments == None:
+            if timeout is not None and time.time() - start_total >= float(timeout):
+                self._set_last_operation(
+                    "get_instruments",
+                    "timeout",
+                    "timeout",
+                    {"type": type, "timeout": timeout},
+                )
+                return None
             try:
                 self.api.get_instruments(type)
                 start = time.time()
                 while self.api.instruments == None and time.time() - start < 10:
-                    pass
+                    if timeout is not None and time.time() - start_total >= float(timeout):
+                        self._set_last_operation(
+                            "get_instruments",
+                            "timeout",
+                            "timeout",
+                            {"type": type, "timeout": timeout},
+                        )
+                        return None
+                    time.sleep(min(self.suspend, 0.05))
             except:
                 logging.error('**error** api.get_instruments need reconnect')
                 self.connect()
+        self._set_last_operation(
+            "get_instruments",
+            "ok",
+            None,
+            {"type": type},
+        )
         return self.api.instruments
 
     def instruments_input_to_ACTIVES(self, type):
@@ -358,15 +393,28 @@ class IQ_Option:
             except:
                 pass
 
-    def get_all_init_v2(self):
+    def get_all_init_v2(self, timeout=30):
         self.api.api_option_init_all_result_v2 = None
 
         self.api.get_api_option_init_all_v2()
         start_t = time.time()
         while self.api.api_option_init_all_result_v2 == None:
-            if time.time() - start_t >= 30:
+            if timeout is not None and time.time() - start_t >= float(timeout):
                 logging.error('**warning** get_all_init_v2 late 30 sec')
+                self._set_last_operation(
+                    "get_all_init_v2",
+                    "timeout",
+                    "timeout",
+                    {"timeout": timeout},
+                )
                 return None
+            time.sleep(min(self.suspend, 0.05))
+        self._set_last_operation(
+            "get_all_init_v2",
+            "ok",
+            None,
+            None,
+        )
         return self.api.api_option_init_all_result_v2
 
         # return OP_code.ACTIVES
@@ -458,9 +506,24 @@ class IQ_Option:
 
     # ______________________________________self.api.getprofile() https________________________________
 
-    def get_profile_ansyc(self):
+    def get_profile_ansyc(self, timeout=10):
+        start = time.time()
         while self.api.profile.msg == None:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_profile_ansyc",
+                    "timeout",
+                    "timeout",
+                    {"timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
+        self._set_last_operation(
+            "get_profile_ansyc",
+            "ok",
+            None,
+            None,
+        )
         return self.api.profile.msg
 
     """def get_profile(self):
@@ -505,11 +568,23 @@ class IQ_Option:
             if balance["id"] == global_value.balance_id:
                 return balance["amount"]
 
-    def get_balances(self):
+    def get_balances(self, timeout=10):
         self.api.balances_raw = None
         self.api.get_balances()
-        while self.api.balances_raw == None:
-            pass
+        if not self._wait_for_api_attr("balances_raw", timeout):
+            self._set_last_operation(
+                "get_balances",
+                "timeout",
+                "timeout",
+                {"timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "get_balances",
+            "ok",
+            None,
+            None,
+        )
         return self.api.balances_raw
 
     def get_balance_mode(self):
@@ -522,11 +597,23 @@ class IQ_Option:
                 elif balance["type"] == 4:
                     return "PRACTICE"
 
-    def reset_practice_balance(self):
+    def reset_practice_balance(self, timeout=10):
         self.api.training_balance_reset_request = None
         self.api.reset_training_balance()
-        while self.api.training_balance_reset_request == None:
-            pass
+        if not self._wait_for_api_attr("training_balance_reset_request", timeout):
+            self._set_last_operation(
+                "reset_practice_balance",
+                "timeout",
+                "timeout",
+                {"timeout": timeout},
+            )
+            return None
+        self._set_last_operation(
+            "reset_practice_balance",
+            "ok",
+            None,
+            None,
+        )
         return self.api.training_balance_reset_request
 
     def position_change_all(self, Main_Name, user_balance_id):
