@@ -51,6 +51,9 @@ Status: implementado parcialmente nesta branch.
 - Tornar `stop_candles_stream`, `stop_candles_one_stream` e
   `stop_candles_all_size_stream` limitados por timeout e com retorno
   booleano consistente.
+- Tornar `buy_digital`, `buy_digital_spot` e `close_digital_option`
+  diagnosticaveis via `last_operation`, com timeout parametrizavel e sem
+  busy-wait puro.
 
 ## Fase 3 - Estado por instancia
 

@@ -1297,7 +1297,7 @@ class IQ_Option:
     # thank thiagottjv
     # https://github.com/Lu-Yi-Hsun/iqoptionapi/issues/65#issuecomment-513998357
 
-    def buy_digital_spot(self, active, amount, action, duration):
+    def buy_digital_spot(self, active, amount, action, duration, timeout=30):
         # Expiration time need to be formatted like this: YYYYMMDDHHII
         # And need to be on GMT time
 
@@ -1308,7 +1308,32 @@ class IQ_Option:
             action = 'C'
         else:
             logging.error('buy_digital_spot active error')
+            self._set_last_operation(
+                "buy_digital_spot",
+                "rejected",
+                "invalid_action",
+                {"active": active, "action": action, "duration": duration},
+            )
             return -1
+        try:
+            duration = int(duration)
+            amount = float(amount)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "buy_digital_spot",
+                "rejected",
+                "invalid_amount_or_duration",
+                {"active": active, "amount": amount, "duration": duration},
+            )
+            return False, None
+        if not active or duration <= 0 or amount <= 0:
+            self._set_last_operation(
+                "buy_digital_spot",
+                "rejected",
+                "invalid_input",
+                {"active": active, "amount": amount, "duration": duration},
+            )
+            return False, None
         # doEURUSD201907191250PT5MPSPT
         timestamp = int(self.api.timesync.server_timestamp)
         if duration == 1:
@@ -1331,13 +1356,31 @@ class IQ_Option:
         self.api.place_digital_option(instrument_id, amount)
         start_t = time.time()
         while self.api.digital_option_placed_id == None:
-            if time.time() - start_t > 30:
+            if timeout is not None and time.time() - start_t > float(timeout):
                 logging.error('buy_digital_spot loss digital_option_placed_id')
+                self._set_last_operation(
+                    "buy_digital_spot",
+                    "timeout",
+                    "timeout",
+                    {"instrument_id": instrument_id, "timeout": timeout},
+                )
                 return False, None
             time.sleep(0.01)
         if isinstance(self.api.digital_option_placed_id, int):
+            self._set_last_operation(
+                "buy_digital_spot",
+                "ok",
+                None,
+                {"instrument_id": instrument_id, "id": self.api.digital_option_placed_id},
+            )
             return True, self.api.digital_option_placed_id
         else:
+            self._set_last_operation(
+                "buy_digital_spot",
+                "rejected",
+                "broker_message",
+                {"instrument_id": instrument_id, "response": self.api.digital_option_placed_id},
+            )
             return False, self.api.digital_option_placed_id
 
     def get_digital_spot_profit_after_sale(self, position_id):
@@ -1438,32 +1481,63 @@ class IQ_Option:
         else:
             return None
 
-    def buy_digital(self, amount, instrument_id):
+    def buy_digital(self, amount, instrument_id, timeout=30):
         self.api.digital_option_placed_id = None
         self.api.place_digital_option(instrument_id, amount)
         start_t = time.time()
         while self.api.digital_option_placed_id == None:
-            if time.time() - start_t > 30:
+            if timeout is not None and time.time() - start_t > float(timeout):
                 logging.error('buy_digital loss digital_option_placed_id')
+                self._set_last_operation(
+                    "buy_digital",
+                    "timeout",
+                    "timeout",
+                    {"instrument_id": instrument_id, "timeout": timeout},
+                )
                 return False, None
+            time.sleep(0.01)
+        self._set_last_operation(
+            "buy_digital",
+            "ok",
+            None,
+            {"instrument_id": instrument_id, "id": self.api.digital_option_placed_id},
+        )
         return True, self.api.digital_option_placed_id
 
-    def close_digital_option(self, position_id):
+    def close_digital_option(self, position_id, timeout=30):
         self.api.result = None
         start_t = time.time()
         while self.get_async_order(position_id)["position-changed"] == {}:
-            if time.time() - start_t > 30:
+            if timeout is not None and time.time() - start_t > float(timeout):
                 logging.error('close_digital_option loss position-changed')
+                self._set_last_operation(
+                    "close_digital_option",
+                    "timeout",
+                    "position_changed_timeout",
+                    {"position_id": position_id, "timeout": timeout},
+                )
                 return False
             time.sleep(0.01)
         position_changed = self.get_async_order(position_id)["position-changed"]["msg"]
         self.api.close_digital_option(position_changed["external_id"])
         start_t = time.time()
         while self.api.result == None:
-            if time.time() - start_t > 30:
+            if timeout is not None and time.time() - start_t > float(timeout):
                 logging.error('close_digital_option loss result')
+                self._set_last_operation(
+                    "close_digital_option",
+                    "timeout",
+                    "result_timeout",
+                    {"position_id": position_id, "timeout": timeout},
+                )
                 return False
             time.sleep(0.01)
+        self._set_last_operation(
+            "close_digital_option",
+            "ok",
+            None,
+            {"position_id": position_id, "result": self.api.result},
+        )
         return self.api.result
 
     def check_win_digital(self, buy_order_id, polling_time):
