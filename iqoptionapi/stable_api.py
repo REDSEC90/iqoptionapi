@@ -56,6 +56,19 @@ def _extract_closed_option_profit(payload):
     return None
 
 
+def _new_request_id(prefix):
+    return "%s-%s-%s" % (prefix, threading.get_ident(), int(time.time() * 1000000))
+
+
+def _sort_candles(candles):
+    if not candles:
+        return []
+    try:
+        return sorted(candles, key=lambda candle: int(candle.get("from", 0)))
+    except Exception:
+        return candles
+
+
 class IQ_Option:
     __version__ = "6.8.9.1"
 
@@ -491,6 +504,16 @@ class IQ_Option:
 
     def get_candles(self, ACTIVES, interval, count, endtime, timeout=10):
         self.api.candles.candles_data = None
+        if ACTIVES not in OP_code.ACTIVES:
+            logging.error('**error** get_candles invalid active')
+            return []
+        try:
+            if int(interval) <= 0 or int(count) <= 0:
+                logging.error('**error** get_candles invalid interval/count')
+                return []
+        except (TypeError, ValueError):
+            logging.error('**error** get_candles invalid interval/count')
+            return []
         start = time.time()
         while True:
             try:
@@ -510,7 +533,7 @@ class IQ_Option:
                 logging.error('**error** get_candles need reconnect')
                 self.connect()
 
-        return self.api.candles.candles_data
+        return _sort_candles(self.api.candles.candles_data)
 
     #######################################################
     # ______________________________________________________
@@ -882,7 +905,7 @@ class IQ_Option:
 
         self.api.buy_multi_option = {}
         self.api.buy_successful = None
-        req_id = "buyraw"
+        req_id = _new_request_id("buyraw")
         try:
             self.api.buy_multi_option[req_id]["id"] = None
         except:
@@ -914,7 +937,7 @@ class IQ_Option:
     def buy(self, price, ACTIVES, ACTION, expirations):
         self.api.buy_multi_option = {}
         self.api.buy_successful = None
-        req_id = "buy"
+        req_id = _new_request_id("buy")
         try:
             self.api.buy_multi_option[req_id]["id"] = None
         except:

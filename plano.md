@@ -62,11 +62,16 @@ Status: iniciado nesta branch.
 
 ## Fase 4 - Compra e candles
 
+Status: iniciado nesta branch.
+
 - Padronizar retorno de compra com `accepted`, `order_id`, `reason` e `raw`.
 - Separar rejeicao de broker de falha de transporte.
 - Normalizar candles para `from`, `open`, `max`, `min`, `close`, `volume`.
 - Garantir ordenacao e validacao de timeframe/count.
 - Corrigir expiração para depender do timestamp do broker de forma consistente.
+- Gerar `request_id` unico para `buy` e `buy_by_raw_expirations` mantendo o
+  contrato publico atual.
+- Validar ativo/timeframe/count antes de enviar `get-candles`.
 
 ## Fase 5 - Observabilidade
 
