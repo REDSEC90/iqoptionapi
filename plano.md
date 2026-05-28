@@ -95,6 +95,9 @@ Status: iniciado nesta branch.
   sem deixar mensagem malformada prender mutex ou derrubar o handler.
 - Registrar payloads `option-closed` malformados em
   `closed_option_last_error`, sem quebrar o cache de resultados validos.
+- Expor `get_api_diagnostics()` no wrapper publico `stable_api` para o OB-CC
+  consumir `last_operation` e erros de transporte sem depender de atributos
+  internos.
 
 ## Fase 6 - Testes e gates
 

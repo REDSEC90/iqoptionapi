@@ -143,6 +143,14 @@ class IQ_Option:
             "timestamp": time.time(),
         }
 
+    def get_api_diagnostics(self):
+        api = getattr(self, "api", None)
+        return {
+            "last_operation": dict(self.last_operation),
+            "websocket_last_message_error": getattr(api, "websocket_last_message_error", None),
+            "closed_option_last_error": getattr(api, "closed_option_last_error", None),
+        }
+
     def re_subscribe_stream(self):
         try:
             for ac in self.subscribe_candle:
