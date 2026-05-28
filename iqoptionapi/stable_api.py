@@ -931,8 +931,9 @@ class IQ_Option:
 
     ##############################################################################################
 
-    def check_win(self, id_number):
+    def check_win(self, id_number, timeout=10):
         # 'win':win money 'equal':no win no loose   'loose':loose money
+        start = time.time()
         while True:
             try:
                 listinfodata_dict = self.api.listinfodata.get(id_number)
@@ -940,33 +941,81 @@ class IQ_Option:
                     break
             except:
                 pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "check_win",
+                    "pending",
+                    "timeout",
+                    {"id": id_number, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
         self.api.listinfodata.delete(id_number)
+        self._set_last_operation(
+            "check_win",
+            "resolved",
+            None,
+            {"id": id_number, "win": listinfodata_dict["win"]},
+        )
         return listinfodata_dict["win"]
 
-    def check_win_v2(self, id_number, polling_time):
+    def check_win_v2(self, id_number, polling_time, timeout=30):
+        start = time.time()
         while True:
-            check, data = self.get_betinfo(id_number)
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "check_win_v2",
+                    "pending",
+                    "timeout",
+                    {"id": id_number, "timeout": timeout},
+                )
+                return None
+            check, data = self.get_betinfo(id_number, timeout=timeout)
+            if not check or data is None:
+                time.sleep(polling_time)
+                continue
             win = data["result"]["data"][str(id_number)]["win"]
             if check and win != "":
                 try:
-
-                    return data["result"]["data"][str(id_number)]["profit"] - data["result"]["data"][str(id_number)][
+                    profit = data["result"]["data"][str(id_number)]["profit"] - data["result"]["data"][str(id_number)][
                         "deposit"]
+                    self._set_last_operation(
+                        "check_win_v2",
+                        "resolved",
+                        None,
+                        {"id": id_number, "profit": profit},
+                    )
+                    return profit
                 except:
                     pass
             time.sleep(polling_time)
 
-    def check_win_v3(self, id_number):
+    def check_win_v3(self, id_number, timeout=10):
+        start = time.time()
         while True:
             try:
-
-                if self.get_async_order(id_number)["option-closed"] != {}:
-                    break
+                payload = self.get_async_order(id_number)["option-closed"]
+                if payload != {}:
+                    profit = _extract_closed_option_profit(payload)
+                    if profit is not None:
+                        self._set_last_operation(
+                            "check_win_v3",
+                            "resolved",
+                            None,
+                            {"id": id_number, "profit": profit},
+                        )
+                        return profit
             except:
                 pass
-
-        return self.get_async_order(id_number)["option-closed"]["msg"]["profit_amount"] - \
-               self.get_async_order(id_number)["option-closed"]["msg"]["amount"]
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "check_win_v3",
+                    "pending",
+                    "timeout",
+                    {"id": id_number, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
 
     def check_win_v4(self, id_number, timeout=1):
         """Compatível com versões modernas da API.

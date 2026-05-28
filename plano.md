@@ -62,6 +62,8 @@ Status: implementado parcialmente nesta branch.
   via `last_operation`.
 - Tornar `buy_order`, `change_auto_margin_call` e `change_order` limitados por
   timeout, com diagnostico de aceite, rejeicao e pendencia.
+- Tornar resultados legados (`check_win`, `check_win_v2`, `check_win_v3`)
+  limitados por timeout e consistentes com o calculo normalizado de lucro.
 
 ## Fase 3 - Estado por instancia
 
