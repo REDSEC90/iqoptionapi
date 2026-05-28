@@ -107,6 +107,13 @@ class IQ_Option:
         self.SESSION_HEADER = {
             "User-Agent": r"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36"}
         self.SESSION_COOKIE = {}
+        self.last_operation = {
+            "name": None,
+            "status": None,
+            "reason": None,
+            "payload": None,
+            "timestamp": None,
+        }
         #
 
         # --start
@@ -117,6 +124,15 @@ class IQ_Option:
 
     def get_server_timestamp(self):
         return self.api.timesync.server_timestamp
+
+    def _set_last_operation(self, name, status, reason=None, payload=None):
+        self.last_operation = {
+            "name": name,
+            "status": status,
+            "reason": reason,
+            "payload": payload,
+            "timestamp": time.time(),
+        }
 
     def re_subscribe_stream(self):
         try:
@@ -521,17 +537,30 @@ class IQ_Option:
     # ________________________self.api.getcandles() wss________________________
 
     def get_candles(self, ACTIVES, interval, count, endtime, timeout=10):
-        self.api.candles.candles_data = None
         if ACTIVES not in OP_code.ACTIVES:
             logging.error('**error** get_candles invalid active')
+            self._set_last_operation("get_candles", "rejected", "invalid_active", {"active": ACTIVES})
             return []
         try:
             if int(interval) <= 0 or int(count) <= 0:
                 logging.error('**error** get_candles invalid interval/count')
+                self._set_last_operation(
+                    "get_candles",
+                    "rejected",
+                    "invalid_interval_or_count",
+                    {"active": ACTIVES, "interval": interval, "count": count},
+                )
                 return []
         except (TypeError, ValueError):
             logging.error('**error** get_candles invalid interval/count')
+            self._set_last_operation(
+                "get_candles",
+                "rejected",
+                "invalid_interval_or_count",
+                {"active": ACTIVES, "interval": interval, "count": count},
+            )
             return []
+        self.api.candles.candles_data = None
         start = time.time()
         while True:
             try:
@@ -540,6 +569,7 @@ class IQ_Option:
                 while self.check_connect() and self.api.candles.candles_data == None:
                     if timeout and time.time() - start >= float(timeout):
                         logging.error('**error** get_candles timeout')
+                        self._set_last_operation("get_candles", "timeout", "timeout", {"active": ACTIVES})
                         return []
                     time.sleep(self.suspend)
                 if self.api.candles.candles_data != None:
@@ -547,11 +577,19 @@ class IQ_Option:
             except:
                 if timeout and time.time() - start >= float(timeout):
                     logging.error('**error** get_candles timeout')
+                    self._set_last_operation("get_candles", "timeout", "timeout", {"active": ACTIVES})
                     return []
                 logging.error('**error** get_candles need reconnect')
                 self.connect()
 
-        return _normalize_candles(self.api.candles.candles_data)
+        candles = _normalize_candles(self.api.candles.candles_data)
+        self._set_last_operation(
+            "get_candles",
+            "ok",
+            None,
+            {"active": ACTIVES, "interval": interval, "count": len(candles)},
+        )
+        return candles
 
     #######################################################
     # ______________________________________________________
@@ -815,6 +853,12 @@ class IQ_Option:
 
             profit = _extract_closed_option_profit(payload)
             if profit is not None:
+                self._set_last_operation(
+                    "check_win_v4",
+                    "resolved",
+                    "socket_option_closed",
+                    {"id": id_number, "profit": profit},
+                )
                 return True, profit
 
             try:
@@ -824,9 +868,21 @@ class IQ_Option:
 
             profit = _extract_closed_option_profit(payload)
             if profit is not None:
+                self._set_last_operation(
+                    "check_win_v4",
+                    "resolved",
+                    "option_closed",
+                    {"id": id_number, "profit": profit},
+                )
                 return True, profit
 
             if end_time is not None and time.monotonic() >= end_time:
+                self._set_last_operation(
+                    "check_win_v4",
+                    "pending",
+                    "timeout",
+                    {"id": id_number},
+                )
                 return False, None
 
             sleep_time = self.suspend
@@ -938,6 +994,12 @@ class IQ_Option:
                 if "message" in self.api.buy_multi_option[req_id].keys():
                     logging.error(
                         '**warning** buy' + str(self.api.buy_multi_option[req_id]["message"]))
+                    self._set_last_operation(
+                        "buy_by_raw_expirations",
+                        "rejected",
+                        "broker_message",
+                        self.api.buy_multi_option[req_id],
+                    )
                     return False, self.api.buy_multi_option[req_id]["message"]
             except:
                 pass
@@ -947,9 +1009,16 @@ class IQ_Option:
                 pass
             if time.time() - start_t >= 5:
                 logging.error('**warning** buy late 5 sec')
+                self._set_last_operation("buy_by_raw_expirations", "timeout", "timeout", {"request_id": req_id})
                 return False, None
             time.sleep(0.01)
 
+        self._set_last_operation(
+            "buy_by_raw_expirations",
+            "ok",
+            None,
+            {"request_id": req_id, "id": self.api.buy_multi_option[req_id]["id"]},
+        )
         return self.api.result, self.api.buy_multi_option[req_id]["id"]
 
     def buy(self, price, ACTIVES, ACTION, expirations):
@@ -968,6 +1037,12 @@ class IQ_Option:
         while self.api.result == None or id == None:
             try:
                 if "message" in self.api.buy_multi_option[req_id].keys():
+                    self._set_last_operation(
+                        "buy",
+                        "rejected",
+                        "broker_message",
+                        self.api.buy_multi_option[req_id],
+                    )
                     return False, self.api.buy_multi_option[req_id]["message"]
             except:
                 pass
@@ -977,9 +1052,16 @@ class IQ_Option:
                 pass
             if time.time() - start_t >= 5:
                 logging.error('**warning** buy late 5 sec')
+                self._set_last_operation("buy", "timeout", "timeout", {"request_id": req_id})
                 return False, None
             time.sleep(0.01)
 
+        self._set_last_operation(
+            "buy",
+            "ok",
+            None,
+            {"request_id": req_id, "id": self.api.buy_multi_option[req_id]["id"]},
+        )
         return self.api.result, self.api.buy_multi_option[req_id]["id"]
 
     def sell_option(self, options_ids):

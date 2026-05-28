@@ -77,10 +77,14 @@ Status: iniciado nesta branch.
 
 ## Fase 5 - Observabilidade
 
+Status: iniciado nesta branch.
+
 - Emitir eventos estruturados de conexao, compra, rejeicao, candle, resultado,
   timeout e reconnect.
 - Incluir latencia, `request_id`, `order_id` e motivo classificado.
 - Preservar dados sensiveis fora de logs.
+- Expor `last_operation` com nome, status, motivo, payload resumido e timestamp
+  para diagnostico simples de chamadas publicas.
 
 ## Fase 6 - Testes e gates
 
