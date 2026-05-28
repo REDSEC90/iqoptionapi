@@ -6,11 +6,15 @@ import threading
 import time
 import logging
 import operator
+import itertools
 import iqoptionapi.global_value as global_value
 from collections import defaultdict
 from collections import deque
 from iqoptionapi.expiration import get_expiration_time, get_remaning_time
 from datetime import datetime, timedelta
+
+
+_REQUEST_COUNTER = itertools.count(1)
 
 
 def nested_dict(n, type):
@@ -57,7 +61,12 @@ def _extract_closed_option_profit(payload):
 
 
 def _new_request_id(prefix):
-    return "%s-%s-%s" % (prefix, threading.get_ident(), int(time.time() * 1000000))
+    return "%s-%s-%s-%s" % (
+        prefix,
+        threading.get_ident(),
+        int(time.time() * 1000000),
+        next(_REQUEST_COUNTER),
+    )
 
 
 def _normalize_candle(candle):

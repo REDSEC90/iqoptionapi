@@ -76,6 +76,8 @@ Status: iniciado nesta branch.
 - Validar ativo/timeframe/count antes de enviar `get-candles`.
 - Normalizar candles preservando payload original e garantindo aliases
   `high`/`low`, `max`/`min` e `volume`.
+- Cobrir fluxo offline `buy -> option-closed -> check_win_v4`, sem broker real,
+  para proteger o contrato usado pelo OB-CC.
 
 ## Fase 5 - Observabilidade
 
