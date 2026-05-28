@@ -60,11 +60,29 @@ def _new_request_id(prefix):
     return "%s-%s-%s" % (prefix, threading.get_ident(), int(time.time() * 1000000))
 
 
-def _sort_candles(candles):
+def _normalize_candle(candle):
+    if not isinstance(candle, dict):
+        return candle
+    normalized = dict(candle)
+    if "high" not in normalized and "max" in normalized:
+        normalized["high"] = normalized["max"]
+    if "low" not in normalized and "min" in normalized:
+        normalized["low"] = normalized["min"]
+    if "max" not in normalized and "high" in normalized:
+        normalized["max"] = normalized["high"]
+    if "min" not in normalized and "low" in normalized:
+        normalized["min"] = normalized["low"]
+    if "volume" not in normalized:
+        normalized["volume"] = 0
+    return normalized
+
+
+def _normalize_candles(candles):
     if not candles:
         return []
     try:
-        return sorted(candles, key=lambda candle: int(candle.get("from", 0)))
+        normalized = [_normalize_candle(candle) for candle in candles]
+        return sorted(normalized, key=lambda candle: int(candle.get("from", 0)))
     except Exception:
         return candles
 
@@ -533,7 +551,7 @@ class IQ_Option:
                 logging.error('**error** get_candles need reconnect')
                 self.connect()
 
-        return _sort_candles(self.api.candles.candles_data)
+        return _normalize_candles(self.api.candles.candles_data)
 
     #######################################################
     # ______________________________________________________

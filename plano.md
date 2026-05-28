@@ -72,6 +72,8 @@ Status: iniciado nesta branch.
 - Gerar `request_id` unico para `buy` e `buy_by_raw_expirations` mantendo o
   contrato publico atual.
 - Validar ativo/timeframe/count antes de enviar `get-candles`.
+- Normalizar candles preservando payload original e garantindo aliases
+  `high`/`low`, `max`/`min` e `volume`.
 
 ## Fase 5 - Observabilidade
 

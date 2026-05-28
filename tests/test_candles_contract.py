@@ -33,6 +33,31 @@ class TestCandlesContract(unittest.TestCase):
         self.assertEqual([candle["from"] for candle in candles], [100, 200, 300])
         self.assertEqual(len(fake.requests), 1)
 
+    def test_get_candles_normalizes_high_low_aliases_and_volume(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            def __init__(self):
+                self.candles = Candles()
+
+            def getcandles(self, active_id, interval, count, endtime):
+                del active_id, interval, count, endtime
+                self.candles.candles_data = [
+                    {"from": 100, "open": 1.0, "close": 1.1, "max": 1.2, "min": 0.9},
+                    {"from": 200, "open": 1.1, "close": 1.0, "high": 1.3, "low": 0.8},
+                ]
+
+        api.api = _FakeApi()
+
+        candles = api.get_candles("EURUSD-OTC", 60, 2, 999, timeout=1)
+
+        self.assertEqual(candles[0]["high"], 1.2)
+        self.assertEqual(candles[0]["low"], 0.9)
+        self.assertEqual(candles[0]["volume"], 0)
+        self.assertEqual(candles[1]["max"], 1.3)
+        self.assertEqual(candles[1]["min"], 0.8)
+        self.assertEqual(candles[1]["volume"], 0)
+
     def test_get_candles_rejects_invalid_input_without_request(self):
         api = IQ_Option("email", "password")
 
