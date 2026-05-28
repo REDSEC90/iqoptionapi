@@ -700,6 +700,43 @@ class IQ_Option:
         return self.get_async_order(id_number)["option-closed"]["msg"]["profit_amount"] - \
                self.get_async_order(id_number)["option-closed"]["msg"]["amount"]
 
+    def check_win_v4(self, id_number, timeout=0):
+        """Compatível com versões modernas da API.
+
+        - timeout <= 0: mantém polling continuo.
+        - timeout > 0: aguarda ate `timeout` segundos e retorna (False, None) se nao houver resolucao.
+
+        Retorno:
+            tuple[bool, float|None]: (resolvido, lucro).
+        """
+        end_time = None
+        if timeout and float(timeout) > 0:
+            end_time = time.time() + float(timeout)
+
+        while True:
+            try:
+                payload = self.api.socket_option_closed.get(id_number)
+                if payload is not None:
+                    msg = payload.get("msg", {})
+                    win = msg.get("win", "")
+                    if win == "equal":
+                        return True, 0.0
+                    if win == "loose":
+                        return True, 0.0 - float(msg.get("sum", 0) or 0.0)
+                    if win:
+                        return True, float(msg.get("win_amount", 0) or 0.0) - float(msg.get("sum", 0) or 0.0)
+            except Exception:
+                pass
+
+            if end_time is not None and time.time() >= end_time:
+                return False, None
+
+            sleep_time = self.suspend
+            if end_time is not None:
+                sleep_time = max(0.0, min(self.suspend, end_time - time.time()))
+            if sleep_time:
+                time.sleep(sleep_time)
+
     # -------------------get infomation only for binary option------------------------
 
     def get_betinfo(self, id_number):
