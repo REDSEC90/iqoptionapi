@@ -158,6 +158,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.websocket_client = None
         self._send_lock = threading.Lock()
         self.websocket_last_message_error = None
+        self.closed_option_last_error = None
         self.socket_option_opened = {}
         self.socket_option_closed = {}
         self.timesync = TimeSync()

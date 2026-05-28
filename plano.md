@@ -93,6 +93,8 @@ Status: iniciado nesta branch.
   `last_operation`.
 - Registrar erro de processamento websocket em `websocket_last_message_error`
   sem deixar mensagem malformada prender mutex ou derrubar o handler.
+- Registrar payloads `option-closed` malformados em
+  `closed_option_last_error`, sem quebrar o cache de resultados validos.
 
 ## Fase 6 - Testes e gates
 

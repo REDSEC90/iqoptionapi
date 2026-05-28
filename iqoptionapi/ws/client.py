@@ -37,19 +37,48 @@ class WebsocketClient(object):
                     #del mini key
                     del dict[key1][key2][sorted(dict[key1][key2].keys(), reverse=False)[0]]   
 
+    def _record_closed_option_error(self, reason, message, exc=None):
+        error = {"reason": reason}
+        if isinstance(message, dict):
+            error["name"] = message.get("name")
+            error["msg"] = message.get("msg")
+        if exc is not None:
+            error["type"] = type(exc).__name__
+            error["message"] = str(exc)
+        try:
+            self.api.closed_option_last_error = error
+        except Exception:
+            pass
+
     def _store_closed_option(self, message):
         try:
+            if not isinstance(message, dict):
+                self._record_closed_option_error("invalid_message", message)
+                return
             msg = message.get("msg", {})
+            if not isinstance(msg, dict):
+                self._record_closed_option_error("invalid_msg", message)
+                return
             option_id = msg.get("option_id", msg.get("id"))
             if option_id is None:
+                self._record_closed_option_error("missing_option_id", message)
                 return
-            option_id = int(option_id)
+            try:
+                option_id = int(option_id)
+            except (TypeError, ValueError) as exc:
+                self._record_closed_option_error("invalid_option_id", message, exc)
+                return
             self.api.order_async[option_id]["option-closed"] = message
             if not isinstance(getattr(self.api, "socket_option_closed", None), dict):
                 self.api.socket_option_closed = {}
             self.api.socket_option_closed[option_id] = message
+            try:
+                self.api.closed_option_last_error = None
+            except Exception:
+                pass
         except Exception:
             logging.getLogger(__name__).debug("failed to store closed option", exc_info=True)
+            self._record_closed_option_error("store_failed", message)
 
     def on_message(self, message): # pylint: disable=unused-argument
         global_value.ssl_Mutual_exclusion=True
