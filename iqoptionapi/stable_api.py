@@ -1850,7 +1850,7 @@ class IQ_Option:
             )
             return False, self.api.digital_option_placed_id
 
-    def get_digital_spot_profit_after_sale(self, position_id):
+    def get_digital_spot_profit_after_sale(self, position_id, timeout=10):
         def get_instrument_id_to_bid(data, instrument_id):
             for row in data["msg"]["quotes"]:
                 if row["symbols"][0] == instrument_id:
@@ -1861,19 +1861,35 @@ class IQ_Option:
         # email:yihsun1992@gmail.com
         # Source code reference
         # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/iqoption/dto/entity/position/Position.java#L564
+        start = time.time()
         while self.get_async_order(position_id)["position-changed"] == {}:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_digital_spot_profit_after_sale",
+                    "timeout",
+                    "position_changed_timeout",
+                    {"position_id": position_id, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
         # ___________________/*position*/_________________
         position = self.get_async_order(position_id)["position-changed"]["msg"]
         # doEURUSD201911040628PT1MPSPT
         # z mean check if call or not
-        if position["instrument_id"].find("MPSPT"):
+        if "MPSPT" in position["instrument_id"]:
             z = False
-        elif position["instrument_id"].find("MCSPT"):
+        elif "MCSPT" in position["instrument_id"]:
             z = True
         else:
             logging.error(
                 'get_digital_spot_profit_after_sale position error' + str(position["instrument_id"]))
+            self._set_last_operation(
+                "get_digital_spot_profit_after_sale",
+                "rejected",
+                "invalid_instrument_id",
+                {"position_id": position_id, "instrument_id": position["instrument_id"]},
+            )
+            return None
 
         ACTIVES = position['raw_event']['instrument_underlying']
         amount = max(position['raw_event']["buy_amount"], position['raw_event']["sell_amount"])
@@ -1895,7 +1911,15 @@ class IQ_Option:
 
         # ___________________/*position*/_________________
         instrument_quites_generated_data = self.get_instrument_quites_generated_data(
-            ACTIVES, duration)
+            ACTIVES, duration, timeout=timeout)
+        if instrument_quites_generated_data is None:
+            self._set_last_operation(
+                "get_digital_spot_profit_after_sale",
+                "timeout",
+                "quotes_timeout",
+                {"position_id": position_id, "active": ACTIVES, "duration": duration},
+            )
+            return None
 
         # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.5.1/sources/com/iqoption/dto/entity/position/Position.java#L493
         f_tmp = get_instrument_id_to_bid(
@@ -1944,8 +1968,21 @@ class IQ_Option:
             price = (f / getRate)
             # getAbsCount Reference
             # https://github.com/Lu-Yi-Hsun/Decompiler-IQ-Option/blob/master/Source%20Code/5.27.0/sources/com/iqoption/dto/entity/position/Position.java#L450
-            return price * getAbsCount - amount
+            profit = price * getAbsCount - amount
+            self._set_last_operation(
+                "get_digital_spot_profit_after_sale",
+                "ok",
+                None,
+                {"position_id": position_id, "profit": profit},
+            )
+            return profit
         else:
+            self._set_last_operation(
+                "get_digital_spot_profit_after_sale",
+                "rejected",
+                "missing_bid",
+                {"position_id": position_id},
+            )
             return None
 
     def buy_digital(self, amount, instrument_id, timeout=30):

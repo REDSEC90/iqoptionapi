@@ -91,6 +91,8 @@ Status: implementado parcialmente nesta branch.
   limitadas por timeout e observaveis via `last_operation`.
 - Endurecer live-deal com validacao de ativo/buffer, inicializacao explicita
   de deque limitado e `pop` seguro quando nao ha eventos.
+- Tornar `get_digital_spot_profit_after_sale` limitado por timeout, corrigindo
+  tambem a deteccao de lado do instrumento digital baseada em `find()`.
 
 ## Fase 3 - Estado por instancia
 

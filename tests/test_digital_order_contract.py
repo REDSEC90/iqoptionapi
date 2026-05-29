@@ -148,6 +148,59 @@ class TestDigitalOrderContract(unittest.TestCase):
         self.assertEqual(api.last_operation["name"], "check_win_digital_v2")
         self.assertEqual(api.last_operation["status"], "resolved")
 
+    def test_get_digital_spot_profit_after_sale_times_out_waiting_position(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            order_async = nested_dict(2, dict)
+
+        api.api = _FakeApi()
+
+        self.assertIsNone(api.get_digital_spot_profit_after_sale(9001, timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "get_digital_spot_profit_after_sale")
+        self.assertEqual(api.last_operation["reason"], "position_changed_timeout")
+
+    def test_get_digital_spot_profit_after_sale_records_profit(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            def __init__(self):
+                self.order_async = nested_dict(2, dict)
+                self.instrument_quotes_generated_raw_data = nested_dict(2, dict)
+                self.order_async[9001]["position-changed"] = {
+                    "msg": {
+                        "instrument_id": "doEURUSD201911040628PT1MPSPT",
+                        "raw_event": {
+                            "instrument_underlying": "EURUSD",
+                            "buy_amount": 10.0,
+                            "sell_amount": 0.0,
+                            "count": 1,
+                            "instrument_strike_value": 1000000,
+                            "extra_data": {
+                                "lower_instrument_strike": 1000000,
+                                "upper_instrument_strike": 1000000,
+                                "lower_instrument_id": "lower-id",
+                                "upper_instrument_id": "upper-id",
+                            },
+                            "currency_rate": 1,
+                        },
+                    }
+                }
+                self.instrument_quotes_generated_raw_data["EURUSD"][60] = {
+                    "msg": {
+                        "quotes": [
+                            {"symbols": ["lower-id"], "price": {"bid": 4.0}},
+                            {"symbols": ["upper-id"], "price": {"bid": 5.0}},
+                        ]
+                    }
+                }
+
+        api.api = _FakeApi()
+
+        self.assertEqual(api.get_digital_spot_profit_after_sale(9001, timeout=1), -6.0)
+        self.assertEqual(api.last_operation["name"], "get_digital_spot_profit_after_sale")
+        self.assertEqual(api.last_operation["status"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()
