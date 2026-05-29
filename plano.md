@@ -109,6 +109,8 @@ Status: implementado parcialmente nesta branch.
   quebrar por acesso a `None`.
 - Fazer `connect()` registrar `last_operation` em sucesso, rejeicao e timeout
   de `balance_id`, mantendo o contrato publico de retorno.
+- Fazer `connect(timeout=...)` repassar o mesmo limite para o transporte HTTP
+  bruto, rejeitando timeout invalido antes de recriar a sessao.
 - Isolar `buy_multi` com `request_id` unico por ordem, timeout parametrizavel,
   validacao de entrada e diagnostico em `last_operation`.
 - Fazer `buy` e `buy_by_raw_expirations` validarem ativo antes de enviar

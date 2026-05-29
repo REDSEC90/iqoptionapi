@@ -187,13 +187,30 @@ class IQ_Option:
 
     def connect(self, timeout=30):
         try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "connect",
+                "rejected",
+                "invalid_timeout",
+                {"timeout": timeout},
+            )
+            return False, "invalid_timeout"
+
+        try:
             self.api.close()
         except:
             pass
             # logging.error('**warning** self.api.close() fail')
 
-        self.api = IQOptionAPI(
-            "iqoption.com", self.email, self.password)
+        try:
+            self.api = IQOptionAPI(
+                "iqoption.com", self.email, self.password, request_timeout=timeout)
+        except TypeError as exc:
+            if "request_timeout" not in str(exc):
+                raise
+            self.api = IQOptionAPI(
+                "iqoption.com", self.email, self.password)
         check = None
         self.api.set_session(headers=self.SESSION_HEADER, cookies=self.SESSION_COOKIE)
         try:
