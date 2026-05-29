@@ -2695,33 +2695,75 @@ class IQ_Option:
         self.api.live_deal_data[name][active][_type] = deque(
             list(), buffersize)
 
-    def get_user_profile_client(self, user_id):
+    def get_user_profile_client(self, user_id, timeout=10):
         self.api.user_profile_client = None
         self.api.Get_User_Profile_Client(user_id)
-        while self.api.user_profile_client == None:
-            pass
+        if not self._wait_for_api_attr("user_profile_client", timeout):
+            self._set_last_operation(
+                "get_user_profile_client",
+                "timeout",
+                "timeout",
+                {"user_id": user_id, "timeout": timeout},
+            )
+            return None
 
+        self._set_last_operation(
+            "get_user_profile_client",
+            "ok",
+            None,
+            {"user_id": user_id},
+        )
         return self.api.user_profile_client
 
-    def request_leaderboard_userinfo_deals_client(self, user_id, country_id):
+    def request_leaderboard_userinfo_deals_client(self, user_id, country_id, timeout=10):
         self.api.leaderboard_userinfo_deals_client = None
 
+        start = time.time()
         while True:
             try:
                 if self.api.leaderboard_userinfo_deals_client["isSuccessful"] == True:
                     break
             except:
                 pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "request_leaderboard_userinfo_deals_client",
+                    "timeout",
+                    "timeout",
+                    {"user_id": user_id, "country_id": country_id, "timeout": timeout},
+                )
+                return None
             self.api.Request_Leaderboard_Userinfo_Deals_Client(
                 user_id, country_id)
-            time.sleep(0.2)
+            time.sleep(min(0.2, self.suspend))
 
+        self._set_last_operation(
+            "request_leaderboard_userinfo_deals_client",
+            "ok",
+            None,
+            {"user_id": user_id, "country_id": country_id},
+        )
         return self.api.leaderboard_userinfo_deals_client
 
-    def get_users_availability(self, user_id):
+    def get_users_availability(self, user_id, timeout=10):
         self.api.users_availability = None
 
+        start = time.time()
         while self.api.users_availability == None:
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_users_availability",
+                    "timeout",
+                    "timeout",
+                    {"user_id": user_id, "timeout": timeout},
+                )
+                return None
             self.api.Get_Users_Availability(user_id)
-            time.sleep(0.2)
+            time.sleep(min(0.2, self.suspend))
+        self._set_last_operation(
+            "get_users_availability",
+            "ok",
+            None,
+            {"user_id": user_id},
+        )
         return self.api.users_availability

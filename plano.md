@@ -86,6 +86,9 @@ Status: implementado parcialmente nesta branch.
   acesso a `None`, retornando diagnostico da etapa que falhou.
 - Fazer `get_binary_option_detail` e `get_all_profit` tratarem timeout de init
   sem quebrar por acesso a `None`.
+- Tornar requisicoes finais de usuario (`get_user_profile_client`,
+  `request_leaderboard_userinfo_deals_client`, `get_users_availability`)
+  limitadas por timeout e observaveis via `last_operation`.
 
 ## Fase 3 - Estado por instancia
 
