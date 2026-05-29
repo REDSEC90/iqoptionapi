@@ -532,9 +532,17 @@ class IQ_Option:
 
     # --------for binary option detail
 
-    def get_binary_option_detail(self):
+    def get_binary_option_detail(self, timeout=30):
         detail = nested_dict(2, dict)
-        init_info = self.get_all_init()
+        init_info = self.get_all_init(timeout=timeout)
+        if init_info is None:
+            self._set_last_operation(
+                "get_binary_option_detail",
+                "timeout",
+                "init_timeout",
+                {"timeout": timeout},
+            )
+            return None
         for actives in init_info["result"]["turbo"]["actives"]:
             name = init_info["result"]["turbo"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
@@ -544,11 +552,25 @@ class IQ_Option:
             name = init_info["result"]["binary"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
             detail[name]["binary"] = init_info["result"]["binary"]["actives"][actives]
+        self._set_last_operation(
+            "get_binary_option_detail",
+            "ok",
+            None,
+            None,
+        )
         return detail
 
-    def get_all_profit(self):
+    def get_all_profit(self, timeout=30):
         all_profit = nested_dict(2, dict)
-        init_info = self.get_all_init()
+        init_info = self.get_all_init(timeout=timeout)
+        if init_info is None:
+            self._set_last_operation(
+                "get_all_profit",
+                "timeout",
+                "init_timeout",
+                {"timeout": timeout},
+            )
+            return None
         for actives in init_info["result"]["turbo"]["actives"]:
             name = init_info["result"]["turbo"]["actives"][actives]["name"]
             name = name[name.index(".") + 1:len(name)]
@@ -564,6 +586,12 @@ class IQ_Option:
                                                  100.0 -
                                                  init_info["result"]["binary"]["actives"][actives]["option"]["profit"][
                                                      "commission"]) / 100.0
+        self._set_last_operation(
+            "get_all_profit",
+            "ok",
+            None,
+            None,
+        )
         return all_profit
 
     # ----------------------------------------

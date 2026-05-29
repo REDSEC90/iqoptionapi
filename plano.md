@@ -84,6 +84,8 @@ Status: implementado parcialmente nesta branch.
   `last_operation`.
 - Fazer `get_all_open_time` tratar timeouts das dependencias sem erro por
   acesso a `None`, retornando diagnostico da etapa que falhou.
+- Fazer `get_binary_option_detail` e `get_all_profit` tratarem timeout de init
+  sem quebrar por acesso a `None`.
 
 ## Fase 3 - Estado por instancia
 
