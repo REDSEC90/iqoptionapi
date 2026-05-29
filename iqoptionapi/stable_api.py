@@ -625,12 +625,25 @@ class IQ_Option:
                 {"timeout": timeout},
             )
             return None
-        digital_data = digital_underlying["underlying"]
+        digital_data = []
+        digital_status = "ok"
+        if isinstance(digital_underlying, dict):
+            raw_digital_data = digital_underlying.get("underlying")
+            if isinstance(raw_digital_data, list):
+                digital_data = raw_digital_data
+            else:
+                digital_status = "missing_underlying"
+        else:
+            digital_status = "invalid_response"
         for digital in digital_data:
+            if not isinstance(digital, dict):
+                continue
             name = digital["underlying"]
-            schedule = digital["schedule"]
+            schedule = digital.get("schedule") or []
             OPEN_TIME["digital"][name]["open"] = False
             for schedule_time in schedule:
+                if not isinstance(schedule_time, dict):
+                    continue
                 start = schedule_time["open"]
                 end = schedule_time["close"]
                 if start < time.time() < end:
@@ -663,7 +676,7 @@ class IQ_Option:
             "get_all_open_time",
             "ok",
             None,
-            None,
+            {"digital_status": digital_status},
         )
         return OPEN_TIME
 
