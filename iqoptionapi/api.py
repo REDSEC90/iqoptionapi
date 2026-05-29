@@ -66,6 +66,29 @@ from collections import defaultdict
 
 
 _DEFAULT_HTTP_REQUEST_TIMEOUT = 30
+_SENSITIVE_HTTP_KEYS = (
+    "authorization",
+    "cookie",
+    "password",
+    "set-cookie",
+    "ssid",
+    "token",
+)
+
+
+def _redact_http_mapping(value, redact_all=False):
+    try:
+        items = value.items()
+    except AttributeError:
+        return value
+    return {
+        key: (
+            "<redacted>"
+            if redact_all or any(marker in str(key).lower() for marker in _SENSITIVE_HTTP_KEYS)
+            else item_value
+        )
+        for key, item_value in items
+    }
 
 
 def nested_dict(n, type):
@@ -241,7 +264,13 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         """
         logger = logging.getLogger(__name__)
 
-        logger.debug(method+": "+url+" headers: "+str(self.session.headers)+" cookies: "+str(self.session.cookies.get_dict()))
+        logger.debug(
+            "%s: %s headers: %s cookies: %s",
+            method,
+            url,
+            _redact_http_mapping(self.session.headers),
+            _redact_http_mapping(self.session.cookies.get_dict(), redact_all=True),
+        )
         self.http_last_request = {
             "method": method,
             "url": url,

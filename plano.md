@@ -73,6 +73,8 @@ Status: implementado parcialmente nesta branch.
   `send_http_request_v2`, evitando bloqueio indefinido em login/perfil/eventos.
 - Registrar diagnostico da ultima request/erro HTTP sem headers, cookies ou
   payload sensivel, expondo esse estado para OB-CC via `get_api_diagnostics`.
+- Sanitizar logs HTTP de debug para nao expor headers sensiveis, tokens, ssid
+  ou cookies durante falhas de login/perfil/eventos.
 - Tornar `get_all_init` limitado por timeout total, inclusive quando o broker
   nunca retorna `isSuccessful=True` ou a chamada precisa reconectar.
 - Fazer `get_balance`, `get_currency` e `get_balance_mode` tratarem timeouts
