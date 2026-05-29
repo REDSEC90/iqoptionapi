@@ -65,6 +65,9 @@ import iqoptionapi.global_value as global_value
 from collections import defaultdict
 
 
+_DEFAULT_HTTP_REQUEST_TIMEOUT = 30
+
+
 def nested_dict(n, type):
     if n == 1:
         return defaultdict(type)
@@ -85,12 +88,13 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     # Runtime state is initialized in __init__. Keeping mutable caches on the
     # class object makes independent broker sessions leak data into each other.
 
-    def __init__(self, host, username, password, proxies=None):
+    def __init__(self, host, username, password, proxies=None, request_timeout=_DEFAULT_HTTP_REQUEST_TIMEOUT):
         """
         :param str host: The hostname or ip address of a IQ Option server.
         :param str username: The username of a IQ Option server.
         :param str password: The password of a IQ Option server.
         :param dict proxies: (optional) The http request proxies.
+        :param float request_timeout: (optional) Timeout for HTTP requests.
         """
         self.https_url = "https://{host}/api".format(host=host)
         self.wss_url = "wss://{host}/echo/websocket".format(host=host)
@@ -157,6 +161,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.username = username
         self.password = password
         self.proxies = proxies
+        self.request_timeout = request_timeout
         # is used to determine if a buyOrder was set  or failed. If
         # it is None, there had been no buy order yet or just send.
         # If it is false, the last failed
@@ -195,7 +200,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                         data=data,
                                         params=params,
                                         headers=headers,
-                                        proxies=self.proxies)
+                                        proxies=self.proxies,
+                                        timeout=self.request_timeout)
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)
@@ -226,7 +232,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
                                         data=data,
                                         params=params,
                                         headers=headers,
-                                        proxies=self.proxies)
+                                        proxies=self.proxies,
+                                        timeout=self.request_timeout)
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)
