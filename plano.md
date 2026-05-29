@@ -116,6 +116,8 @@ Status: implementado parcialmente nesta branch.
 - Validar `request_timeout` HTTP e `connect(timeout=...)` como numeros
   positivos, impedindo `None`, zero ou negativos de reabrirem bloqueio
   indefinido.
+- Rejeitar tambem `NaN` e infinito nos timeouts HTTP/conexao, mantendo apenas
+  limites finitos e executaveis.
 - Isolar `buy_multi` com `request_id` unico por ordem, timeout parametrizavel,
   validacao de entrada e diagnostico em `last_operation`.
 - Fazer `buy` e `buy_by_raw_expirations` validarem ativo antes de enviar

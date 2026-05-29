@@ -5,6 +5,7 @@ import iqoptionapi.country_id as Country
 import threading
 import time
 import logging
+import math
 import operator
 import itertools
 import iqoptionapi.global_value as global_value
@@ -196,7 +197,7 @@ class IQ_Option:
                 {"timeout": timeout},
             )
             return False, "invalid_timeout"
-        if timeout <= 0:
+        if timeout <= 0 or not math.isfinite(timeout):
             self._set_last_operation(
                 "connect",
                 "rejected",

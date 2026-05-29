@@ -69,7 +69,7 @@ class TestConnectHttpTimeoutContract(unittest.TestCase):
         api = IQ_Option("email", "password")
         initial_instances = len(_RawApi.instances)
 
-        for timeout in (None, 0, -1, "bad"):
+        for timeout in (None, 0, -1, float("inf"), float("nan"), "bad"):
             with self.subTest(timeout=timeout):
                 self.assertEqual(api.connect(timeout=timeout), (False, "invalid_timeout"))
 

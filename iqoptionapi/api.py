@@ -3,6 +3,7 @@
 import time
 import json
 import logging
+import math
 import threading
 import requests
 import ssl
@@ -106,7 +107,7 @@ def _normalize_http_request_timeout(timeout):
         timeout = float(timeout)
     except (TypeError, ValueError):
         raise ValueError("request_timeout must be a positive number")
-    if timeout <= 0:
+    if timeout <= 0 or not math.isfinite(timeout):
         raise ValueError("request_timeout must be a positive number")
     return timeout
 
