@@ -105,6 +105,9 @@ Status: implementado parcialmente nesta branch.
   de `balance_id`, mantendo o contrato publico de retorno.
 - Isolar `buy_multi` com `request_id` unico por ordem, timeout parametrizavel,
   validacao de entrada e diagnostico em `last_operation`.
+- Fazer `buy` e `buy_by_raw_expirations` validarem ativo antes de enviar
+  request, aceitarem timeout parametrizavel e registrarem diagnostico de
+  rejeicao/timeout.
 
 ## Fase 3 - Estado por instancia
 

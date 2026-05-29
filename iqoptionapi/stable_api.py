@@ -1625,17 +1625,33 @@ class IQ_Option:
         logging.error('get_remaning(self,duration) ERROR duration')
         return "ERROR duration"
 
-    def buy_by_raw_expirations(self, price, active, direction, option, expired):
+    def buy_by_raw_expirations(self, price, active, direction, option, expired, timeout=5):
+        active_id = OP_code.ACTIVES.get(active)
+        if active_id is None:
+            self._set_last_operation(
+                "buy_by_raw_expirations",
+                "rejected",
+                "invalid_active",
+                {"active": active},
+            )
+            return False, None
+        try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "buy_by_raw_expirations",
+                "rejected",
+                "invalid_timeout",
+                {"active": active, "timeout": timeout},
+            )
+            return False, None
 
         self.api.buy_multi_option = {}
         self.api.buy_successful = None
         req_id = _new_request_id("buyraw")
-        try:
-            self.api.buy_multi_option[req_id]["id"] = None
-        except:
-            pass
+        self.api.buy_multi_option[req_id] = {"id": None}
         self.api.buyv3_by_raw_expired(
-            price, OP_code.ACTIVES[active], direction, option, expired, request_id=req_id)
+            price, active_id, direction, option, expired, request_id=req_id)
         start_t = time.time()
         id = None
         self.api.result = None
@@ -1657,9 +1673,14 @@ class IQ_Option:
                 id = self.api.buy_multi_option[req_id]["id"]
             except:
                 pass
-            if time.time() - start_t >= 5:
-                logging.error('**warning** buy late 5 sec')
-                self._set_last_operation("buy_by_raw_expirations", "timeout", "timeout", {"request_id": req_id})
+            if timeout is not None and time.time() - start_t >= timeout:
+                logging.error('**warning** buy late %s sec', timeout)
+                self._set_last_operation(
+                    "buy_by_raw_expirations",
+                    "timeout",
+                    "timeout",
+                    {"request_id": req_id, "timeout": timeout},
+                )
                 return False, None
             time.sleep(0.01)
 
@@ -1671,16 +1692,32 @@ class IQ_Option:
         )
         return self.api.result, self.api.buy_multi_option[req_id]["id"]
 
-    def buy(self, price, ACTIVES, ACTION, expirations):
+    def buy(self, price, ACTIVES, ACTION, expirations, timeout=5):
+        active_id = OP_code.ACTIVES.get(ACTIVES)
+        if active_id is None:
+            self._set_last_operation(
+                "buy",
+                "rejected",
+                "invalid_active",
+                {"active": ACTIVES},
+            )
+            return False, None
+        try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "buy",
+                "rejected",
+                "invalid_timeout",
+                {"active": ACTIVES, "timeout": timeout},
+            )
+            return False, None
         self.api.buy_multi_option = {}
         self.api.buy_successful = None
         req_id = _new_request_id("buy")
-        try:
-            self.api.buy_multi_option[req_id]["id"] = None
-        except:
-            pass
+        self.api.buy_multi_option[req_id] = {"id": None}
         self.api.buyv3(
-            price, OP_code.ACTIVES[ACTIVES], ACTION, expirations, req_id)
+            price, active_id, ACTION, expirations, req_id)
         start_t = time.time()
         id = None
         self.api.result = None
@@ -1700,9 +1737,14 @@ class IQ_Option:
                 id = self.api.buy_multi_option[req_id]["id"]
             except:
                 pass
-            if time.time() - start_t >= 5:
-                logging.error('**warning** buy late 5 sec')
-                self._set_last_operation("buy", "timeout", "timeout", {"request_id": req_id})
+            if timeout is not None and time.time() - start_t >= timeout:
+                logging.error('**warning** buy late %s sec', timeout)
+                self._set_last_operation(
+                    "buy",
+                    "timeout",
+                    "timeout",
+                    {"request_id": req_id, "timeout": timeout},
+                )
                 return False, None
             time.sleep(0.01)
 
