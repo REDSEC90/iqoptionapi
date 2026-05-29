@@ -95,6 +95,8 @@ Status: implementado parcialmente nesta branch.
   tambem a deteccao de lado do instrumento digital baseada em `find()`.
 - Validar nomes de canais live-deal no wrapper publico antes de enviar ao canal
   websocket.
+- Validar nomes tambem nos canais websocket baixos de live-deal e cobrir os
+  `routingFilters` enviados em subscribe/unsubscribe.
 
 ## Fase 3 - Estado por instancia
 
