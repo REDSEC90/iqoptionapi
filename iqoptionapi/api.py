@@ -102,6 +102,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self._send_lock = threading.Lock()
         self.websocket_last_message_error = None
         self.closed_option_last_error = None
+        self.http_last_request = None
+        self.http_last_error = None
         self.socket_option_opened = {}
         self.socket_option_closed = {}
         self.timesync = TimeSync()
@@ -194,20 +196,35 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         url = self.prepare_http_url(resource)
 
         logger.debug(url)
+        self.http_last_request = {
+            "method": method,
+            "url": url,
+            "timeout": self.request_timeout,
+        }
+        self.http_last_error = None
 
-        response = self.session.request(method=method,
-                                        url=url,
-                                        data=data,
-                                        params=params,
-                                        headers=headers,
-                                        proxies=self.proxies,
-                                        timeout=self.request_timeout)
+        try:
+            response = self.session.request(method=method,
+                                            url=url,
+                                            data=data,
+                                            params=params,
+                                            headers=headers,
+                                            proxies=self.proxies,
+                                            timeout=self.request_timeout)
+            response.raise_for_status()
+        except Exception as exc:
+            self.http_last_error = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "method": method,
+                "url": url,
+                "timeout": self.request_timeout,
+            }
+            raise
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)
         logger.debug(response.cookies)
-
-        response.raise_for_status()
         return response
 
     def send_http_request_v2(self, url, method, data=None, params=None, headers=None):  # pylint: disable=too-many-arguments
@@ -225,15 +242,30 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         logger = logging.getLogger(__name__)
 
         logger.debug(method+": "+url+" headers: "+str(self.session.headers)+" cookies: "+str(self.session.cookies.get_dict()))
+        self.http_last_request = {
+            "method": method,
+            "url": url,
+            "timeout": self.request_timeout,
+        }
+        self.http_last_error = None
         
-        
-        response = self.session.request(method=method,
-                                        url=url,
-                                        data=data,
-                                        params=params,
-                                        headers=headers,
-                                        proxies=self.proxies,
-                                        timeout=self.request_timeout)
+        try:
+            response = self.session.request(method=method,
+                                            url=url,
+                                            data=data,
+                                            params=params,
+                                            headers=headers,
+                                            proxies=self.proxies,
+                                            timeout=self.request_timeout)
+        except Exception as exc:
+            self.http_last_error = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+                "method": method,
+                "url": url,
+                "timeout": self.request_timeout,
+            }
+            raise
         logger.debug(response)
         logger.debug(response.text)
         logger.debug(response.headers)

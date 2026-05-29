@@ -157,6 +157,8 @@ class IQ_Option:
             "last_operation": dict(self.last_operation),
             "websocket_last_message_error": getattr(api, "websocket_last_message_error", None),
             "closed_option_last_error": getattr(api, "closed_option_last_error", None),
+            "http_last_request": getattr(api, "http_last_request", None),
+            "http_last_error": getattr(api, "http_last_error", None),
         }
 
     def re_subscribe_stream(self):

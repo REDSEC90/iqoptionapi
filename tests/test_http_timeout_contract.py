@@ -34,6 +34,12 @@ class _Cookies:
         return {}
 
 
+class _FailingSession(_Session):
+    def request(self, **kwargs):
+        self.calls.append(kwargs)
+        raise TimeoutError("network stalled")
+
+
 class TestHttpTimeoutContract(unittest.TestCase):
     def test_send_http_request_uses_default_timeout(self):
         api = IQOptionAPI("iqoption.com", "email", "password")
@@ -58,6 +64,38 @@ class TestHttpTimeoutContract(unittest.TestCase):
         api.send_http_request_v2("https://example.test/api", "POST")
 
         self.assertEqual(api.session.calls[0]["timeout"], 3)
+
+    def test_send_http_request_records_http_error_diagnostics(self):
+        api = IQOptionAPI("iqoption.com", "email", "password", request_timeout=2)
+        api.session = _FailingSession()
+
+        with self.assertRaises(TimeoutError):
+            api.send_http_request(_Resource(), "GET")
+
+        self.assertEqual(
+            api.http_last_request,
+            {
+                "method": "GET",
+                "url": "https://iqoption.com/api/resource",
+                "timeout": 2,
+            },
+        )
+        self.assertEqual(api.http_last_error["type"], "TimeoutError")
+        self.assertEqual(api.http_last_error["method"], "GET")
+        self.assertEqual(api.http_last_error["url"], "https://iqoption.com/api/resource")
+        self.assertEqual(api.http_last_error["timeout"], 2)
+
+    def test_send_http_request_v2_records_http_error_diagnostics(self):
+        api = IQOptionAPI("iqoption.com", "email", "password", request_timeout=4)
+        api.session = _FailingSession()
+
+        with self.assertRaises(TimeoutError):
+            api.send_http_request_v2("https://auth.iqoption.com/api/v2/login", "POST")
+
+        self.assertEqual(api.http_last_error["type"], "TimeoutError")
+        self.assertEqual(api.http_last_error["method"], "POST")
+        self.assertEqual(api.http_last_error["url"], "https://auth.iqoption.com/api/v2/login")
+        self.assertEqual(api.http_last_error["timeout"], 4)
 
 
 if __name__ == "__main__":
