@@ -101,6 +101,8 @@ Status: implementado parcialmente nesta branch.
   `instruments_input_to_ACTIVES`, `instruments_input_all_in_ACTIVES`,
   `get_ALL_Binary_ACTIVES_OPCODE`) tratar timeouts/retornos invalidos sem
   quebrar por acesso a `None`.
+- Fazer `connect()` registrar `last_operation` em sucesso, rejeicao e timeout
+  de `balance_id`, mantendo o contrato publico de retorno.
 
 ## Fase 3 - Estado por instancia
 

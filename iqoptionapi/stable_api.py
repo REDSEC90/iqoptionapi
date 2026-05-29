@@ -183,7 +183,7 @@ class IQ_Option:
         self.SESSION_HEADER = header
         self.SESSION_COOKIE = cookie
 
-    def connect(self):
+    def connect(self, timeout=30):
         try:
             self.api.close()
         except:
@@ -194,7 +194,16 @@ class IQ_Option:
             "iqoption.com", self.email, self.password)
         check = None
         self.api.set_session(headers=self.SESSION_HEADER, cookies=self.SESSION_COOKIE)
-        check, reason = self.api.connect()
+        try:
+            check, reason = self.api.connect()
+        except Exception as exc:
+            self._set_last_operation(
+                "connect",
+                "failed",
+                type(exc).__name__,
+                {"message": str(exc)},
+            )
+            raise
 
         if check == True:
             # -------------reconnect subscribe_candle
@@ -203,7 +212,13 @@ class IQ_Option:
             # ---------for async get name: "position-changed", microserviceName
             balance_start = time.time()
             while global_value.balance_id == None:
-                if time.time() - balance_start > 30:
+                if timeout is not None and time.time() - balance_start > float(timeout):
+                    self._set_last_operation(
+                        "connect",
+                        "timeout",
+                        "balance_id_timeout",
+                        {"timeout": timeout},
+                    )
                     return False, "balance_id timeout"
                 time.sleep(self.suspend)
             self.position_change_all("subscribeMessage", global_value.balance_id)
@@ -231,8 +246,20 @@ class IQ_Option:
             """
 
             # self.get_balance_id()
+            self._set_last_operation(
+                "connect",
+                "ok",
+                None,
+                {"balance_id": global_value.balance_id},
+            )
             return True, None
         else:
+            self._set_last_operation(
+                "connect",
+                "rejected",
+                reason,
+                {"reason": reason},
+            )
             return False, reason
 
     # self.update_ACTIVES_OPCODE()
