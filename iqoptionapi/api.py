@@ -82,69 +82,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
     """Class for communication with IQ Option API."""
      
     # pylint: disable=too-many-public-methods
-    socket_option_opened={}
-    timesync = TimeSync()
-    profile = Profile()
-    candles = Candles()
-    listinfodata = ListInfoData()
-    api_option_init_all_result = []
-    api_option_init_all_result_v2 = []
-    # for digital
-    underlying_list_data = None
-    position_changed = None
-    instrument_quites_generated_data = nested_dict(2, dict)
-    instrument_quotes_generated_raw_data=nested_dict(2, dict)
-    instrument_quites_generated_timestamp = nested_dict(2, dict)
-    strike_list = None
-    leaderboard_deals_client=None
-    #position_changed_data = nested_dict(2, dict)
-    #microserviceName_binary_options_name_option=nested_dict(2,dict)
-    order_async=nested_dict(2, dict)
-    game_betinfo = Game_betinfo_data()
-    instruments = None
-    financial_information = None
-    buy_id = None
-    buy_order_id = None
-    traders_mood = {}  # get hight(put) %
-    order_data = None
-    positions = None
-    position = None
-    deferred_orders = None
-    position_history = None
-    position_history_v2 = None
-    available_leverages = None
-    order_canceled = None
-    close_position_data = None
-    overnight_fee = None
-    # ---for real time
-    digital_option_placed_id = None
-    live_deal_data=nested_dict(3, deque)
-
-
-     
-    subscribe_commission_changed_data=nested_dict(2,dict)
-    real_time_candles = nested_dict(3, dict)
-    real_time_candles_maxdict_table = nested_dict(2, dict)
-    candle_generated_check = nested_dict(2, dict)
-    candle_generated_all_size_check = nested_dict(1, dict)
-    # ---for api_game_getoptions_result
-    api_game_getoptions_result = None
-    sold_options_respond = None
-    tpsl_changed_respond = None
-    auto_margin_call_changed_respond = None
-    top_assets_updated_data={}
-    get_options_v2_data=None
-    # --for binary option multi buy
-    buy_multi_result = None
-    buy_multi_option = {}
-    #
-    result = None
-    training_balance_reset_request=None
-    balances_raw=None
-    user_profile_client=None
-    leaderboard_userinfo_deals_client=None
-    users_availability=None
-    # ------------------
+    # Runtime state is initialized in __init__. Keeping mutable caches on the
+    # class object makes independent broker sessions leak data into each other.
 
     def __init__(self, host, username, password, proxies=None):
         """
@@ -206,6 +145,12 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.get_options_v2_data = None
         self.buy_multi_result = None
         self.buy_multi_option = {}
+        self.result = None
+        self.training_balance_reset_request = None
+        self.balances_raw = None
+        self.user_profile_client = None
+        self.leaderboard_userinfo_deals_client = None
+        self.users_availability = None
         self.session = requests.Session()
         self.session.verify = False
         self.session.trust_env = False

@@ -123,6 +123,9 @@ Status: iniciado nesta branch.
   conexao.
 - Serializar envios websocket por instancia com lock local, mantendo flags
   globais apenas como compatibilidade legada.
+- Remover caches mutaveis remanescentes do corpo da classe `IQOptionAPI`,
+  garantindo que resultados, ordens, candles, live deals, perfil e balances
+  sejam inicializados por instancia.
 
 ## Fase 4 - Compra e candles
 
