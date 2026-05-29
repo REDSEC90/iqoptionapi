@@ -78,6 +78,8 @@ Status: implementado parcialmente nesta branch.
 - Tornar market data digital (`get_digital_underlying_list_data`,
   `get_instrument_quites_generated_data`, `get_realtime_strike_list`) limitado
   por timeout e sem busy-wait puro.
+- Tornar resultados digitais (`check_win_digital`, `check_win_digital_v2`)
+  limitados por timeout e diagnosticaveis via `last_operation`.
 
 ## Fase 3 - Estado por instancia
 

@@ -81,6 +81,73 @@ class TestDigitalOrderContract(unittest.TestCase):
         self.assertEqual(api.last_operation["name"], "close_digital_option")
         self.assertEqual(api.last_operation["status"], "ok")
 
+    def test_check_win_digital_times_out(self):
+        api = IQ_Option("email", "password")
+
+        def get_digital_position(order_id, timeout=10):
+            del order_id, timeout
+            return None
+
+        api.get_digital_position = get_digital_position
+
+        self.assertIsNone(api.check_win_digital(9001, polling_time=0, timeout=0.01))
+        self.assertEqual(api.last_operation["name"], "check_win_digital")
+        self.assertEqual(api.last_operation["reason"], "timeout")
+
+    def test_check_win_digital_records_expired_profit(self):
+        api = IQ_Option("email", "password")
+
+        def get_digital_position(order_id, timeout=10):
+            del order_id, timeout
+            return {
+                "msg": {
+                    "position": {
+                        "status": "closed",
+                        "close_reason": "expired",
+                        "pnl_realized": 18.0,
+                        "buy_amount": 10.0,
+                    }
+                }
+            }
+
+        api.get_digital_position = get_digital_position
+
+        self.assertEqual(api.check_win_digital(9001, polling_time=0, timeout=1), 8.0)
+        self.assertEqual(api.last_operation["name"], "check_win_digital")
+        self.assertEqual(api.last_operation["status"], "resolved")
+
+    def test_check_win_digital_v2_times_out(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            order_async = nested_dict(2, dict)
+
+        api.api = _FakeApi()
+
+        self.assertEqual(api.check_win_digital_v2(9001, timeout=0.01), (False, None))
+        self.assertEqual(api.last_operation["name"], "check_win_digital_v2")
+        self.assertEqual(api.last_operation["reason"], "timeout")
+
+    def test_check_win_digital_v2_records_default_profit(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            def __init__(self):
+                self.order_async = nested_dict(2, dict)
+                self.order_async[9001]["position-changed"] = {
+                    "msg": {
+                        "status": "closed",
+                        "close_reason": "default",
+                        "pnl_realized": 7.25,
+                    }
+                }
+
+        api.api = _FakeApi()
+
+        self.assertEqual(api.check_win_digital_v2(9001, timeout=1), (True, 7.25))
+        self.assertEqual(api.last_operation["name"], "check_win_digital_v2")
+        self.assertEqual(api.last_operation["status"], "resolved")
+
 
 if __name__ == "__main__":
     unittest.main()

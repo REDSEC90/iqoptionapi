@@ -1947,31 +1947,91 @@ class IQ_Option:
         )
         return self.api.result
 
-    def check_win_digital(self, buy_order_id, polling_time):
+    def check_win_digital(self, buy_order_id, polling_time, timeout=30):
+        start = time.time()
         while True:
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "check_win_digital",
+                    "pending",
+                    "timeout",
+                    {"order_id": buy_order_id, "timeout": timeout},
+                )
+                return None
             time.sleep(polling_time)
-            data = self.get_digital_position(buy_order_id)
+            data = self.get_digital_position(buy_order_id, timeout=timeout)
+            if not data:
+                continue
 
             if data["msg"]["position"]["status"] == "closed":
                 if data["msg"]["position"]["close_reason"] == "default":
-                    return data["msg"]["position"]["pnl_realized"]
+                    profit = data["msg"]["position"]["pnl_realized"]
+                    self._set_last_operation(
+                        "check_win_digital",
+                        "resolved",
+                        "default",
+                        {"order_id": buy_order_id, "profit": profit},
+                    )
+                    return profit
                 elif data["msg"]["position"]["close_reason"] == "expired":
-                    return data["msg"]["position"]["pnl_realized"] - data["msg"]["position"]["buy_amount"]
+                    profit = data["msg"]["position"]["pnl_realized"] - data["msg"]["position"]["buy_amount"]
+                    self._set_last_operation(
+                        "check_win_digital",
+                        "resolved",
+                        "expired",
+                        {"order_id": buy_order_id, "profit": profit},
+                    )
+                    return profit
 
-    def check_win_digital_v2(self, buy_order_id):
+    def check_win_digital_v2(self, buy_order_id, timeout=30):
 
+        start = time.time()
         while self.get_async_order(buy_order_id)["position-changed"] == {}:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "check_win_digital_v2",
+                    "pending",
+                    "timeout",
+                    {"order_id": buy_order_id, "timeout": timeout},
+                )
+                return False, None
+            time.sleep(min(self.suspend, 0.05))
         order_data = self.get_async_order(buy_order_id)["position-changed"]["msg"]
         if order_data != None:
             if order_data["status"] == "closed":
                 if order_data["close_reason"] == "expired":
-                    return True, order_data["close_profit"] - order_data["invest"]
+                    profit = order_data["close_profit"] - order_data["invest"]
+                    self._set_last_operation(
+                        "check_win_digital_v2",
+                        "resolved",
+                        "expired",
+                        {"order_id": buy_order_id, "profit": profit},
+                    )
+                    return True, profit
                 elif order_data["close_reason"] == "default":
-                    return True, order_data["pnl_realized"]
+                    profit = order_data["pnl_realized"]
+                    self._set_last_operation(
+                        "check_win_digital_v2",
+                        "resolved",
+                        "default",
+                        {"order_id": buy_order_id, "profit": profit},
+                    )
+                    return True, profit
             else:
+                self._set_last_operation(
+                    "check_win_digital_v2",
+                    "pending",
+                    "open",
+                    {"order_id": buy_order_id, "status": order_data.get("status")},
+                )
                 return False, None
         else:
+            self._set_last_operation(
+                "check_win_digital_v2",
+                "pending",
+                "missing_data",
+                {"order_id": buy_order_id},
+            )
             return False, None
 
     # ----------------------------------------------------------
