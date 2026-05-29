@@ -89,6 +89,8 @@ Status: implementado parcialmente nesta branch.
 - Tornar requisicoes finais de usuario (`get_user_profile_client`,
   `request_leaderboard_userinfo_deals_client`, `get_users_availability`)
   limitadas por timeout e observaveis via `last_operation`.
+- Endurecer live-deal com validacao de ativo/buffer, inicializacao explicita
+  de deque limitado e `pop` seguro quando nao ha eventos.
 
 ## Fase 3 - Estado por instancia
 

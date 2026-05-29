@@ -2664,8 +2664,42 @@ class IQ_Option:
     # "live-deal-binary-option-placed"
     # "live-deal-digital-option"
     def subscribe_live_deal(self, name, active, _type, buffersize):
-        active_id = OP_code.ACTIVES[active]
+        active_id = OP_code.ACTIVES.get(active)
+        if active_id is None:
+            self._set_last_operation(
+                "subscribe_live_deal",
+                "rejected",
+                "invalid_active",
+                {"name": name, "active": active, "type": _type},
+            )
+            return False
+        try:
+            buffersize = int(buffersize)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "subscribe_live_deal",
+                "rejected",
+                "invalid_buffersize",
+                {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+            )
+            return False
+        if buffersize <= 0:
+            self._set_last_operation(
+                "subscribe_live_deal",
+                "rejected",
+                "invalid_buffersize",
+                {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+            )
+            return False
+        self.api.live_deal_data[name][active][_type] = deque(list(), buffersize)
         self.api.Subscribe_Live_Deal(name, active_id, _type)
+        self._set_last_operation(
+            "subscribe_live_deal",
+            "ok",
+            None,
+            {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+        )
+        return True
         """
         self.api.live_deal_data[name][active][_type]=deque(list(),buffersize) 
 
@@ -2675,8 +2709,27 @@ class IQ_Option:
         """
 
     def unscribe_live_deal(self, name, active, _type):
-        active_id = OP_code.ACTIVES[active]
+        active_id = OP_code.ACTIVES.get(active)
+        if active_id is None:
+            self._set_last_operation(
+                "unscribe_live_deal",
+                "rejected",
+                "invalid_active",
+                {"name": name, "active": active, "type": _type},
+            )
+            return False
         self.api.Unscribe_Live_Deal(name, active_id, _type)
+        try:
+            self.api.live_deal_data[name][active][_type].clear()
+        except Exception:
+            pass
+        self._set_last_operation(
+            "unscribe_live_deal",
+            "ok",
+            None,
+            {"name": name, "active": active, "type": _type},
+        )
+        return True
         """
 
         while len(self.api.live_deal_data[name][active][_type])!=0:
@@ -2689,11 +2742,52 @@ class IQ_Option:
         return self.api.live_deal_data[name][active][_type]
 
     def pop_live_deal(self, name, active, _type):
-        return self.api.live_deal_data[name][active][_type].pop()
+        try:
+            value = self.api.live_deal_data[name][active][_type].pop()
+        except IndexError:
+            self._set_last_operation(
+                "pop_live_deal",
+                "empty",
+                "empty",
+                {"name": name, "active": active, "type": _type},
+            )
+            return None
+        self._set_last_operation(
+            "pop_live_deal",
+            "ok",
+            None,
+            {"name": name, "active": active, "type": _type},
+        )
+        return value
 
     def clear_live_deal(self, name, active, _type, buffersize):
+        try:
+            buffersize = int(buffersize)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "clear_live_deal",
+                "rejected",
+                "invalid_buffersize",
+                {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+            )
+            return False
+        if buffersize <= 0:
+            self._set_last_operation(
+                "clear_live_deal",
+                "rejected",
+                "invalid_buffersize",
+                {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+            )
+            return False
         self.api.live_deal_data[name][active][_type] = deque(
             list(), buffersize)
+        self._set_last_operation(
+            "clear_live_deal",
+            "ok",
+            None,
+            {"name": name, "active": active, "type": _type, "buffersize": buffersize},
+        )
+        return True
 
     def get_user_profile_client(self, user_id, timeout=10):
         self.api.user_profile_client = None
