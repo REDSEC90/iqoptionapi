@@ -82,6 +82,8 @@ Status: implementado parcialmente nesta branch.
   limitados por timeout e diagnosticaveis via `last_operation`.
 - Tornar `close_position_v2` limitado por timeout e diagnosticavel via
   `last_operation`.
+- Fazer `get_all_open_time` tratar timeouts das dependencias sem erro por
+  acesso a `None`, retornando diagnostico da etapa que falhou.
 
 ## Fase 3 - Estado por instancia
 

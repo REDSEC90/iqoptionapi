@@ -453,10 +453,18 @@ class IQ_Option:
 
     # ------- chek if binary/digit/cfd/stock... if open or not
 
-    def get_all_open_time(self):
+    def get_all_open_time(self, timeout=30):
         # for binary option turbo and binary
         OPEN_TIME = nested_dict(3, dict)
-        binary_data = self.get_all_init_v2()
+        binary_data = self.get_all_init_v2(timeout=timeout)
+        if binary_data is None:
+            self._set_last_operation(
+                "get_all_open_time",
+                "timeout",
+                "binary_init_timeout",
+                {"timeout": timeout},
+            )
+            return None
         binary_list = ["binary", "turbo"]
         for option in binary_list:
             for actives_id in binary_data[option]["actives"]:
@@ -471,7 +479,16 @@ class IQ_Option:
                     OPEN_TIME[option][name]["open"] = active["enabled"]
 
         # for digital
-        digital_data = self.get_digital_underlying_list_data()["underlying"]
+        digital_underlying = self.get_digital_underlying_list_data(timeout=timeout)
+        if digital_underlying is None:
+            self._set_last_operation(
+                "get_all_open_time",
+                "timeout",
+                "digital_underlying_timeout",
+                {"timeout": timeout},
+            )
+            return None
+        digital_data = digital_underlying["underlying"]
         for digital in digital_data:
             name = digital["underlying"]
             schedule = digital["schedule"]
@@ -485,7 +502,16 @@ class IQ_Option:
         # for OTHER
         instrument_list = ["cfd", "forex", "crypto"]
         for instruments_type in instrument_list:
-            ins_data = self.get_instruments(instruments_type)["instruments"]
+            instruments = self.get_instruments(instruments_type, timeout=timeout)
+            if instruments is None:
+                self._set_last_operation(
+                    "get_all_open_time",
+                    "timeout",
+                    "instruments_timeout",
+                    {"instrument_type": instruments_type, "timeout": timeout},
+                )
+                return None
+            ins_data = instruments["instruments"]
             for detail in ins_data:
                 name = detail["name"]
                 schedule = detail["schedule"]
@@ -496,6 +522,12 @@ class IQ_Option:
                     if start < time.time() < end:
                         OPEN_TIME[instruments_type][name]["open"] = True
 
+        self._set_last_operation(
+            "get_all_open_time",
+            "ok",
+            None,
+            None,
+        )
         return OPEN_TIME
 
     # --------for binary option detail
