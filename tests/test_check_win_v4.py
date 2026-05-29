@@ -63,3 +63,26 @@ class TestCheckWinV4(unittest.TestCase):
         resolved, profit = api.check_win_v4(3001, timeout=1)
         self.assertTrue(resolved)
         self.assertAlmostEqual(profit, 1.64)
+
+    def test_check_win_v4_loss_prefers_amount_over_large_sum(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeSocket:
+            socket_option_closed = {
+                4001: {
+                    "msg": {
+                        "win": "loose",
+                        "sum": "999999.15",
+                        "amount": "1.00",
+                        "win_amount": "0",
+                    }
+                }
+            }
+            order_async = {}
+
+        api.api = _FakeSocket()
+
+        resolved, profit = api.check_win_v4(4001, timeout=1)
+
+        self.assertTrue(resolved)
+        self.assertEqual(profit, -1.0)

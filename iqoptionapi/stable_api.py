@@ -34,6 +34,14 @@ def _safe_float(value, default=0.0):
         return default
 
 
+def _extract_closed_option_amount(msg):
+    for key in ("amount", "deposit", "buy_amount"):
+        amount = _safe_float(msg.get(key), default=0.0)
+        if amount > 0:
+            return amount
+    return _safe_float(msg.get("sum"), default=0.0)
+
+
 def _extract_closed_option_profit(payload):
     if not isinstance(payload, dict):
         return None
@@ -42,14 +50,16 @@ def _extract_closed_option_profit(payload):
     if not isinstance(msg, dict):
         return None
 
-    if "profit_amount" in msg and "amount" in msg:
-        return _safe_float(msg.get("profit_amount")) - _safe_float(msg.get("amount"))
+    if "profit_amount" in msg:
+        amount = _extract_closed_option_amount(msg)
+        if amount > 0:
+            return _safe_float(msg.get("profit_amount")) - amount
 
     win = str(msg.get("win", "") or "").strip().lower()
     if not win:
         return None
 
-    amount = _safe_float(msg.get("sum", msg.get("amount", 0.0)))
+    amount = _extract_closed_option_amount(msg)
     if win in ("equal", "draw"):
         return 0.0
     if win in ("loose", "loss", "lose", "lost"):
