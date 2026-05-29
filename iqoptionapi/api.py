@@ -77,10 +77,12 @@ _SENSITIVE_HTTP_KEYS = (
 
 
 def _redact_http_mapping(value, redact_all=False):
+    if value is None:
+        return None
     try:
         items = value.items()
     except AttributeError:
-        return value
+        return "<redacted>" if redact_all else value
     return {
         key: (
             "<redacted>"
@@ -89,6 +91,14 @@ def _redact_http_mapping(value, redact_all=False):
         )
         for key, item_value in items
     }
+
+
+def _redact_http_cookies(value):
+    try:
+        value = value.get_dict()
+    except AttributeError:
+        pass
+    return _redact_http_mapping(value, redact_all=True)
 
 
 def nested_dict(n, type):
@@ -246,8 +256,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
             raise
         logger.debug(response)
         logger.debug(response.text)
-        logger.debug(response.headers)
-        logger.debug(response.cookies)
+        logger.debug("response headers: %s", _redact_http_mapping(response.headers))
+        logger.debug("response cookies: %s", _redact_http_cookies(response.cookies))
         return response
 
     def send_http_request_v2(self, url, method, data=None, params=None, headers=None):  # pylint: disable=too-many-arguments
@@ -297,8 +307,8 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
             raise
         logger.debug(response)
         logger.debug(response.text)
-        logger.debug(response.headers)
-        logger.debug(response.cookies)
+        logger.debug("response headers: %s", _redact_http_mapping(response.headers))
+        logger.debug("response cookies: %s", _redact_http_cookies(response.cookies))
 
         #response.raise_for_status()
         return response

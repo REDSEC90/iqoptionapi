@@ -10,24 +10,27 @@ class _Resource:
 
 class _Response:
     text = "{}"
-    headers = {}
-    cookies = {}
+
+    def __init__(self, headers=None, cookies=None):
+        self.headers = headers or {}
+        self.cookies = _Cookies(cookies or {})
 
     def raise_for_status(self):
         return None
 
 
 class _Session:
-    def __init__(self, headers=None, cookies=None):
+    def __init__(self, headers=None, cookies=None, response=None):
         self.calls = []
         self.headers = headers or {}
         self.cookies = _Cookies(cookies or {})
+        self.response = response or _Response()
         self.verify = True
         self.trust_env = True
 
     def request(self, **kwargs):
         self.calls.append(kwargs)
-        return _Response()
+        return self.response
 
 
 class _Cookies:
@@ -125,6 +128,33 @@ class TestHttpTimeoutContract(unittest.TestCase):
         self.assertNotIn("secret-token", joined)
         self.assertNotIn("secret-cookie", joined)
         self.assertNotIn("also-sensitive-cookie", joined)
+
+    def test_send_http_request_v2_redacts_response_headers_and_cookies_in_debug_logs(self):
+        api = IQOptionAPI("iqoption.com", "email", "password", request_timeout=3)
+        api.session = _Session(
+            response=_Response(
+                headers={
+                    "Set-Cookie": "ssid=response-secret",
+                    "Content-Type": "application/json",
+                },
+                cookies={
+                    "ssid": "response-cookie",
+                    "tracking": "response-tracking-cookie",
+                },
+            )
+        )
+
+        with self.assertLogs("iqoptionapi.api", level=logging.DEBUG) as logs:
+            api.send_http_request_v2("https://example.test/api", "POST")
+
+        joined = "\n".join(logs.output)
+        self.assertIn("Set-Cookie': '<redacted>'", joined)
+        self.assertIn("Content-Type': 'application/json'", joined)
+        self.assertIn("ssid': '<redacted>'", joined)
+        self.assertIn("tracking': '<redacted>'", joined)
+        self.assertNotIn("response-secret", joined)
+        self.assertNotIn("response-cookie", joined)
+        self.assertNotIn("response-tracking-cookie", joined)
 
 
 if __name__ == "__main__":

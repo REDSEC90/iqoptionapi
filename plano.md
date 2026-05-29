@@ -75,6 +75,8 @@ Status: implementado parcialmente nesta branch.
   payload sensivel, expondo esse estado para OB-CC via `get_api_diagnostics`.
 - Sanitizar logs HTTP de debug para nao expor headers sensiveis, tokens, ssid
   ou cookies durante falhas de login/perfil/eventos.
+- Sanitizar tambem headers e cookies de resposta HTTP, especialmente
+  `Set-Cookie`, para evitar vazamento de sessao em debug.
 - Tornar `get_all_init` limitado por timeout total, inclusive quando o broker
   nunca retorna `isSuccessful=True` ou a chamada precisa reconectar.
 - Fazer `get_balance`, `get_currency` e `get_balance_mode` tratarem timeouts
