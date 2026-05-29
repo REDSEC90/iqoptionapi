@@ -250,15 +250,36 @@ class IQ_Option:
     def get_all_ACTIVES_OPCODE(self):
         return OP_code.ACTIVES
 
-    def update_ACTIVES_OPCODE(self):
+    def update_ACTIVES_OPCODE(self, timeout=30):
         # update from binary option
-        self.get_ALL_Binary_ACTIVES_OPCODE()
+        if not self.get_ALL_Binary_ACTIVES_OPCODE(timeout=timeout):
+            self._set_last_operation(
+                "update_ACTIVES_OPCODE",
+                "rejected",
+                "binary_init_failed",
+                {"timeout": timeout},
+            )
+            return False
         # crypto /dorex/cfd
-        self.instruments_input_all_in_ACTIVES()
+        if not self.instruments_input_all_in_ACTIVES(timeout=timeout):
+            self._set_last_operation(
+                "update_ACTIVES_OPCODE",
+                "rejected",
+                "instruments_failed",
+                {"timeout": timeout},
+            )
+            return False
         dicc = {}
         for lis in sorted(OP_code.ACTIVES.items(), key=operator.itemgetter(1)):
             dicc[lis[0]] = lis[1]
         OP_code.ACTIVES = dicc
+        self._set_last_operation(
+            "update_ACTIVES_OPCODE",
+            "ok",
+            None,
+            {"count": len(OP_code.ACTIVES)},
+        )
+        return True
 
     def get_name_by_activeId(self, activeId):
         info = self.get_financial_information(activeId)
@@ -347,22 +368,83 @@ class IQ_Option:
         )
         return self.api.instruments
 
-    def instruments_input_to_ACTIVES(self, type):
-        instruments = self.get_instruments(type)
-        for ins in instruments["instruments"]:
-            OP_code.ACTIVES[ins["id"]] = ins["active_id"]
+    def instruments_input_to_ACTIVES(self, type, timeout=10):
+        instruments = self.get_instruments(type, timeout=timeout)
+        if instruments is None:
+            self._set_last_operation(
+                "instruments_input_to_ACTIVES",
+                "timeout",
+                "instruments_timeout",
+                {"type": type, "timeout": timeout},
+            )
+            return False
+        try:
+            for ins in instruments["instruments"]:
+                OP_code.ACTIVES[ins["id"]] = ins["active_id"]
+        except Exception:
+            self._set_last_operation(
+                "instruments_input_to_ACTIVES",
+                "rejected",
+                "invalid_response",
+                {"type": type},
+            )
+            return False
+        self._set_last_operation(
+            "instruments_input_to_ACTIVES",
+            "ok",
+            None,
+            {"type": type, "count": len(instruments["instruments"])},
+        )
+        return True
 
-    def instruments_input_all_in_ACTIVES(self):
-        self.instruments_input_to_ACTIVES("crypto")
-        self.instruments_input_to_ACTIVES("forex")
-        self.instruments_input_to_ACTIVES("cfd")
+    def instruments_input_all_in_ACTIVES(self, timeout=10):
+        for instrument_type in ("crypto", "forex", "cfd"):
+            if not self.instruments_input_to_ACTIVES(instrument_type, timeout=timeout):
+                self._set_last_operation(
+                    "instruments_input_all_in_ACTIVES",
+                    "rejected",
+                    "dependency_failed",
+                    {"type": instrument_type, "timeout": timeout},
+                )
+                return False
+        self._set_last_operation(
+            "instruments_input_all_in_ACTIVES",
+            "ok",
+            None,
+            None,
+        )
+        return True
 
-    def get_ALL_Binary_ACTIVES_OPCODE(self):
-        init_info = self.get_all_init()
-        for dirr in (["binary", "turbo"]):
-            for i in init_info["result"][dirr]["actives"]:
-                OP_code.ACTIVES[(init_info["result"][dirr]
-                ["actives"][i]["name"]).split(".")[1]] = int(i)
+    def get_ALL_Binary_ACTIVES_OPCODE(self, timeout=30):
+        init_info = self.get_all_init(timeout=timeout)
+        if init_info is None:
+            self._set_last_operation(
+                "get_ALL_Binary_ACTIVES_OPCODE",
+                "timeout",
+                "init_timeout",
+                {"timeout": timeout},
+            )
+            return False
+        try:
+            for dirr in (["binary", "turbo"]):
+                for i in init_info["result"][dirr]["actives"]:
+                    OP_code.ACTIVES[(init_info["result"][dirr]
+                    ["actives"][i]["name"]).split(".")[1]] = int(i)
+        except Exception:
+            self._set_last_operation(
+                "get_ALL_Binary_ACTIVES_OPCODE",
+                "rejected",
+                "invalid_response",
+                None,
+            )
+            return False
+        self._set_last_operation(
+            "get_ALL_Binary_ACTIVES_OPCODE",
+            "ok",
+            None,
+            None,
+        )
+        return True
 
     # _________________________self.api.get_api_option_init_all() wss______________________
     def get_all_init(self, timeout=30):
