@@ -1533,16 +1533,29 @@ class IQ_Option:
 
     # __________________for Digital___________________
 
-    def get_digital_underlying_list_data(self):
+    def get_digital_underlying_list_data(self, timeout=30):
         self.api.underlying_list_data = None
         self.api.get_digital_underlying()
         start_t = time.time()
         while self.api.underlying_list_data == None:
-            if time.time() - start_t >= 30:
+            if timeout is not None and time.time() - start_t >= float(timeout):
                 logging.error(
                     '**warning** get_digital_underlying_list_data late 30 sec')
+                self._set_last_operation(
+                    "get_digital_underlying_list_data",
+                    "timeout",
+                    "timeout",
+                    {"timeout": timeout},
+                )
                 return None
+            time.sleep(min(self.suspend, 0.05))
 
+        self._set_last_operation(
+            "get_digital_underlying_list_data",
+            "ok",
+            None,
+            None,
+        )
         return self.api.underlying_list_data
 
     def get_strike_list(self, ACTIVES, duration, timeout=10):
@@ -1592,15 +1605,39 @@ class IQ_Option:
         self.api.unsubscribe_instrument_quites_generated(
             ACTIVE, expiration_period)
 
-    def get_instrument_quites_generated_data(self, ACTIVE, duration):
+    def get_instrument_quites_generated_data(self, ACTIVE, duration, timeout=10):
+        start = time.time()
         while self.api.instrument_quotes_generated_raw_data[ACTIVE][duration * 60] == {}:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_instrument_quites_generated_data",
+                    "timeout",
+                    "timeout",
+                    {"active": ACTIVE, "duration": duration, "timeout": timeout},
+                )
+                return None
+            time.sleep(min(self.suspend, 0.05))
+        self._set_last_operation(
+            "get_instrument_quites_generated_data",
+            "ok",
+            None,
+            {"active": ACTIVE, "duration": duration},
+        )
         return self.api.instrument_quotes_generated_raw_data[ACTIVE][duration * 60]
 
-    def get_realtime_strike_list(self, ACTIVE, duration):
+    def get_realtime_strike_list(self, ACTIVE, duration, timeout=10):
+        start = time.time()
         while True:
             if not self.api.instrument_quites_generated_data[ACTIVE][duration * 60]:
-                pass
+                if timeout is not None and time.time() - start >= float(timeout):
+                    self._set_last_operation(
+                        "get_realtime_strike_list",
+                        "timeout",
+                        "quotes_timeout",
+                        {"active": ACTIVE, "duration": duration, "timeout": timeout},
+                    )
+                    return None
+                time.sleep(min(self.suspend, 0.05))
             else:
                 break
         """
@@ -1610,8 +1647,24 @@ class IQ_Option:
         now_timestamp = self.api.instrument_quites_generated_timestamp[ACTIVE][duration * 60]
 
         while ans == {}:
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "get_realtime_strike_list",
+                    "timeout",
+                    "strike_timeout",
+                    {"active": ACTIVE, "duration": duration, "timeout": timeout},
+                )
+                return None
             if self.get_realtime_strike_list_temp_data == {} or now_timestamp != self.get_realtime_strike_list_temp_expiration:
-                raw_data, strike_list = self.get_strike_list(ACTIVE, duration)
+                raw_data, strike_list = self.get_strike_list(ACTIVE, duration, timeout=timeout)
+                if raw_data is None or strike_list is None:
+                    self._set_last_operation(
+                        "get_realtime_strike_list",
+                        "timeout",
+                        "strike_list_timeout",
+                        {"active": ACTIVE, "duration": duration, "timeout": timeout},
+                    )
+                    return None
                 self.get_realtime_strike_list_temp_expiration = raw_data["msg"]["expiration"]
                 self.get_realtime_strike_list_temp_data = strike_list
             else:
@@ -1630,7 +1683,15 @@ class IQ_Option:
                     ans[price_key] = side_data
                 except:
                     pass
+            if ans == {}:
+                time.sleep(min(self.suspend, 0.05))
 
+        self._set_last_operation(
+            "get_realtime_strike_list",
+            "ok",
+            None,
+            {"active": ACTIVE, "duration": duration, "count": len(ans)},
+        )
         return ans
 
     def get_digital_current_profit(self, ACTIVE, duration):

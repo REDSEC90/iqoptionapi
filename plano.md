@@ -75,6 +75,9 @@ Status: implementado parcialmente nesta branch.
   dos caches base sem levantar erro por acesso a `None`.
 - Fazer `change_balance` respeitar timeout do perfil, retornar status booleano
   e rejeitar modo invalido sem encerrar o processo.
+- Tornar market data digital (`get_digital_underlying_list_data`,
+  `get_instrument_quites_generated_data`, `get_realtime_strike_list`) limitado
+  por timeout e sem busy-wait puro.
 
 ## Fase 3 - Estado por instancia
 
