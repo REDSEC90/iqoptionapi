@@ -80,6 +80,8 @@ Status: implementado parcialmente nesta branch.
   por timeout e sem busy-wait puro.
 - Tornar resultados digitais (`check_win_digital`, `check_win_digital_v2`)
   limitados por timeout e diagnosticaveis via `last_operation`.
+- Tornar `close_position_v2` limitado por timeout e diagnosticavel via
+  `last_operation`.
 
 ## Fase 3 - Estado por instancia
 

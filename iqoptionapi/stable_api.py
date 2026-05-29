@@ -2513,16 +2513,44 @@ class IQ_Option:
             )
             return False
 
-    def close_position_v2(self, position_id):
+    def close_position_v2(self, position_id, timeout=10):
+        start = time.time()
         while self.get_async_order(position_id) == None:
-            pass
+            if timeout is not None and time.time() - start >= float(timeout):
+                self._set_last_operation(
+                    "close_position_v2",
+                    "timeout",
+                    "position_timeout",
+                    {"position_id": position_id, "timeout": timeout},
+                )
+                return False
+            time.sleep(min(self.suspend, 0.05))
         position_changed = self.get_async_order(position_id)
+        self.api.close_position_data = None
         self.api.close_position(position_changed["id"])
-        while self.api.close_position_data == None:
-            pass
+        if not self._wait_for_api_attr("close_position_data", timeout):
+            self._set_last_operation(
+                "close_position_v2",
+                "timeout",
+                "close_timeout",
+                {"position_id": position_id, "timeout": timeout},
+            )
+            return False
         if self.api.close_position_data["status"] == 2000:
+            self._set_last_operation(
+                "close_position_v2",
+                "ok",
+                None,
+                {"position_id": position_id},
+            )
             return True
         else:
+            self._set_last_operation(
+                "close_position_v2",
+                "rejected",
+                "broker_status",
+                {"position_id": position_id, "status": self.api.close_position_data.get("status")},
+            )
             return False
 
     def get_overnight_fee(self, instrument_type, active, timeout=10):

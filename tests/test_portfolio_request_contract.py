@@ -125,6 +125,47 @@ class TestPortfolioRequestContract(unittest.TestCase):
         self.assertEqual(api.last_operation["name"], "get_overnight_fee")
         self.assertEqual(api.last_operation["status"], "timeout")
 
+    def test_close_position_v2_times_out_waiting_for_close_response(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            def __init__(self):
+                self.order_async = nested_dict(2, dict)
+                self.order_async[100]["id"] = 101
+                self.close_position_data = None
+
+            def close_position(self, position_id):
+                self.closed_position_id = position_id
+
+        fake = _FakeApi()
+        api.api = fake
+
+        self.assertFalse(api.close_position_v2(100, timeout=0.01))
+        self.assertEqual(fake.closed_position_id, 101)
+        self.assertEqual(api.last_operation["name"], "close_position_v2")
+        self.assertEqual(api.last_operation["reason"], "close_timeout")
+
+    def test_close_position_v2_records_success(self):
+        api = IQ_Option("email", "password")
+
+        class _FakeApi:
+            def __init__(self):
+                self.order_async = nested_dict(2, dict)
+                self.order_async[100]["id"] = 101
+                self.close_position_data = None
+
+            def close_position(self, position_id):
+                self.closed_position_id = position_id
+                self.close_position_data = {"status": 2000}
+
+        fake = _FakeApi()
+        api.api = fake
+
+        self.assertTrue(api.close_position_v2(100, timeout=1))
+        self.assertEqual(fake.closed_position_id, 101)
+        self.assertEqual(api.last_operation["name"], "close_position_v2")
+        self.assertEqual(api.last_operation["status"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()
