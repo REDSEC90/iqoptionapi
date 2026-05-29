@@ -113,6 +113,9 @@ Status: implementado parcialmente nesta branch.
   de `balance_id`, mantendo o contrato publico de retorno.
 - Fazer `connect(timeout=...)` repassar o mesmo limite para o transporte HTTP
   bruto, rejeitando timeout invalido antes de recriar a sessao.
+- Validar `request_timeout` HTTP e `connect(timeout=...)` como numeros
+  positivos, impedindo `None`, zero ou negativos de reabrirem bloqueio
+  indefinido.
 - Isolar `buy_multi` com `request_id` unico por ordem, timeout parametrizavel,
   validacao de entrada e diagnostico em `last_operation`.
 - Fazer `buy` e `buy_by_raw_expirations` validarem ativo antes de enviar

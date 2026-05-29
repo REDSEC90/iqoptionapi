@@ -64,6 +64,12 @@ class TestHttpTimeoutContract(unittest.TestCase):
 
         self.assertEqual(api.session.calls[0]["timeout"], 7.5)
 
+    def test_raw_http_client_rejects_invalid_request_timeout(self):
+        for timeout in (None, 0, -1, "bad"):
+            with self.subTest(timeout=timeout):
+                with self.assertRaises(ValueError):
+                    IQOptionAPI("iqoption.com", "email", "password", request_timeout=timeout)
+
     def test_send_http_request_v2_uses_configured_timeout(self):
         api = IQOptionAPI("iqoption.com", "email", "password", request_timeout=3)
         api.session = _Session()

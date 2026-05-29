@@ -187,8 +187,16 @@ class IQ_Option:
 
     def connect(self, timeout=30):
         try:
-            timeout = None if timeout is None else float(timeout)
+            timeout = float(timeout)
         except (TypeError, ValueError):
+            self._set_last_operation(
+                "connect",
+                "rejected",
+                "invalid_timeout",
+                {"timeout": timeout},
+            )
+            return False, "invalid_timeout"
+        if timeout <= 0:
             self._set_last_operation(
                 "connect",
                 "rejected",

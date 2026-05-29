@@ -101,6 +101,16 @@ def _redact_http_cookies(value):
     return _redact_http_mapping(value, redact_all=True)
 
 
+def _normalize_http_request_timeout(timeout):
+    try:
+        timeout = float(timeout)
+    except (TypeError, ValueError):
+        raise ValueError("request_timeout must be a positive number")
+    if timeout <= 0:
+        raise ValueError("request_timeout must be a positive number")
+    return timeout
+
+
 def nested_dict(n, type):
     if n == 1:
         return defaultdict(type)
@@ -196,7 +206,7 @@ class IQOptionAPI(object):  # pylint: disable=too-many-instance-attributes
         self.username = username
         self.password = password
         self.proxies = proxies
-        self.request_timeout = request_timeout
+        self.request_timeout = _normalize_http_request_timeout(request_timeout)
         # is used to determine if a buyOrder was set  or failed. If
         # it is None, there had been no buy order yet or just send.
         # If it is false, the last failed
