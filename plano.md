@@ -93,6 +93,8 @@ Status: implementado parcialmente nesta branch.
   de deque limitado e `pop` seguro quando nao ha eventos.
 - Tornar `get_digital_spot_profit_after_sale` limitado por timeout, corrigindo
   tambem a deteccao de lado do instrumento digital baseada em `find()`.
+- Validar nomes de canais live-deal no wrapper publico antes de enviar ao canal
+  websocket.
 
 ## Fase 3 - Estado por instancia
 

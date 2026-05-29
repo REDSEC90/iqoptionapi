@@ -2701,6 +2701,14 @@ class IQ_Option:
     # "live-deal-binary-option-placed"
     # "live-deal-digital-option"
     def subscribe_live_deal(self, name, active, _type, buffersize):
+        if name not in ("live-deal-binary-option-placed", "live-deal-digital-option", "live-deal"):
+            self._set_last_operation(
+                "subscribe_live_deal",
+                "rejected",
+                "invalid_name",
+                {"name": name, "active": active, "type": _type},
+            )
+            return False
         active_id = OP_code.ACTIVES.get(active)
         if active_id is None:
             self._set_last_operation(
@@ -2746,6 +2754,14 @@ class IQ_Option:
         """
 
     def unscribe_live_deal(self, name, active, _type):
+        if name not in ("live-deal-binary-option-placed", "live-deal-digital-option", "live-deal"):
+            self._set_last_operation(
+                "unscribe_live_deal",
+                "rejected",
+                "invalid_name",
+                {"name": name, "active": active, "type": _type},
+            )
+            return False
         active_id = OP_code.ACTIVES.get(active)
         if active_id is None:
             self._set_last_operation(
