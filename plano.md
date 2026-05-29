@@ -103,6 +103,8 @@ Status: implementado parcialmente nesta branch.
   quebrar por acesso a `None`.
 - Fazer `connect()` registrar `last_operation` em sucesso, rejeicao e timeout
   de `balance_id`, mantendo o contrato publico de retorno.
+- Isolar `buy_multi` com `request_id` unico por ordem, timeout parametrizavel,
+  validacao de entrada e diagnostico em `last_operation`.
 
 ## Fase 3 - Estado por instancia
 

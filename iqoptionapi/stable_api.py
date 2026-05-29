@@ -1557,30 +1557,66 @@ class IQ_Option:
 
     # __________________FOR OPTION____________________________
 
-    def buy_multi(self, price, ACTIVES, ACTION, expirations):
-        self.api.buy_multi_option = {}
+    def buy_multi(self, price, ACTIVES, ACTION, expirations, timeout=5):
         if len(price) == len(ACTIVES) == len(ACTION) == len(expirations):
+            self.api.buy_multi_option = {}
             buy_len = len(price)
+            request_ids = []
             for idx in range(buy_len):
+                active_id = OP_code.ACTIVES.get(ACTIVES[idx])
+                if active_id is None:
+                    self._set_last_operation(
+                        "buy_multi",
+                        "rejected",
+                        "invalid_active",
+                        {"active": ACTIVES[idx], "index": idx},
+                    )
+                    return [None] * buy_len
+                req_id = _new_request_id("buymulti")
+                request_ids.append(req_id)
                 self.api.buyv3(
-                    price[idx], OP_code.ACTIVES[ACTIVES[idx]], ACTION[idx], expirations[idx], idx)
+                    price[idx], active_id, ACTION[idx], expirations[idx], req_id)
             start_t = time.time()
-            while len(self.api.buy_multi_option) < buy_len:
-                if time.time() - start_t >= 5:
+            while any(req_id not in self.api.buy_multi_option for req_id in request_ids):
+                if timeout is not None and time.time() - start_t >= float(timeout):
                     logging.error('**warning** buy_multi late 5 sec')
+                    self._set_last_operation(
+                        "buy_multi",
+                        "timeout",
+                        "timeout",
+                        {"request_ids": request_ids, "timeout": timeout},
+                    )
                     return [None] * buy_len
                 time.sleep(0.01)
             buy_id = []
-            for key in sorted(self.api.buy_multi_option.keys()):
+            for key in request_ids:
                 try:
-                    value = self.api.buy_multi_option[str(key)]
+                    value = self.api.buy_multi_option[key]
                     buy_id.append(value["id"])
                 except:
                     buy_id.append(None)
 
+            self._set_last_operation(
+                "buy_multi",
+                "ok",
+                None,
+                {"request_ids": request_ids, "count": buy_len},
+            )
             return buy_id
         else:
             logging.error('buy_multi error please input all same len')
+            self._set_last_operation(
+                "buy_multi",
+                "rejected",
+                "invalid_lengths",
+                {
+                    "price": len(price),
+                    "actives": len(ACTIVES),
+                    "actions": len(ACTION),
+                    "expirations": len(expirations),
+                },
+            )
+            return None
 
     def get_remaning(self, duration):
         for remaning in get_remaning_time(self.api.timesync.server_timestamp):
