@@ -1469,9 +1469,20 @@ class IQ_Option:
         Retorno:
             tuple[bool, float|None]: (resolvido, lucro).
         """
+        try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "check_win_v4",
+                "rejected",
+                "invalid_timeout",
+                {"id": id_number, "timeout": timeout},
+            )
+            return False, None
+
         end_time = None
-        if timeout is not None and float(timeout) > 0:
-            end_time = time.monotonic() + float(timeout)
+        if timeout is not None and timeout > 0:
+            end_time = time.monotonic() + timeout
 
         while True:
             payload = None
@@ -2031,6 +2042,16 @@ class IQ_Option:
                 {"active": active, "amount": amount, "duration": duration},
             )
             return False, None
+        try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "buy_digital_spot",
+                "rejected",
+                "invalid_timeout",
+                {"active": active, "timeout": timeout},
+            )
+            return False, None
         if not active or duration <= 0 or amount <= 0:
             self._set_last_operation(
                 "buy_digital_spot",
@@ -2071,14 +2092,29 @@ class IQ_Option:
                 )
                 return False, None
             time.sleep(0.01)
-        if isinstance(self.api.digital_option_placed_id, int):
+        placed_id = self.api.digital_option_placed_id
+        order_id = None
+        if isinstance(placed_id, int) and not isinstance(placed_id, bool):
+            order_id = placed_id
+        elif isinstance(placed_id, str) and placed_id.strip():
+            order_id = placed_id.strip()
+        elif isinstance(placed_id, dict):
+            for key in ("id", "position_id", "order_id"):
+                value = placed_id.get(key)
+                if isinstance(value, int) and not isinstance(value, bool):
+                    order_id = value
+                    break
+                if isinstance(value, str) and value.strip():
+                    order_id = value.strip()
+                    break
+        if order_id is not None:
             self._set_last_operation(
                 "buy_digital_spot",
                 "ok",
                 None,
-                {"instrument_id": instrument_id, "id": self.api.digital_option_placed_id},
+                {"instrument_id": instrument_id, "id": order_id},
             )
-            return True, self.api.digital_option_placed_id
+            return True, order_id
         else:
             self._set_last_operation(
                 "buy_digital_spot",
@@ -2319,10 +2355,20 @@ class IQ_Option:
                     return profit
 
     def check_win_digital_v2(self, buy_order_id, timeout=30):
+        try:
+            timeout = None if timeout is None else float(timeout)
+        except (TypeError, ValueError):
+            self._set_last_operation(
+                "check_win_digital_v2",
+                "rejected",
+                "invalid_timeout",
+                {"order_id": buy_order_id, "timeout": timeout},
+            )
+            return False, None
 
         start = time.time()
         while self.get_async_order(buy_order_id)["position-changed"] == {}:
-            if timeout is not None and time.time() - start >= float(timeout):
+            if timeout is not None and time.time() - start >= timeout:
                 self._set_last_operation(
                     "check_win_digital_v2",
                     "pending",
